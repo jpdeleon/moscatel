@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+
+import argparse
+import pandas as pd
+
+from utils import df_phot, plot_matrix, plot_params, plot_multicolor, df_phot_multicolor
+
+parser = argparse.ArgumentParser(description="Do differential photometry by dividing flux of target star by that of the ref star given the star ids (e.g. target=a,ref=b) and show lightcurve",usage='use "%(prog)s --help" for more information', formatter_class=argparse.RawTextHelpFormatter)
+
+parser.add_argument('--target', help='target star id', type=str, choices=('a','b','c'))
+parser.add_argument('--ref', help='reference star id', type=str, choices=('a','b','c'))
+parser.add_argument('--band', help='choose band', type=str, default='all', choices=('g','r','z', 'all'))
+parser.add_argument('--star', help='normalize lightcurve?', type=int, default=None, choices=(0,1,2))
+parser.add_argument('--normed', help='normalize lightcurve?', type=bool, default=False, choices=(True, False))
+
+args = parser.parse_args()
+
+target = args.target
+ref = args.ref
+normed = args.normed
+band = args.band
+star = args.star
+
+##load output of `moscatel` in output/*.csv
+try:
+    df_g = pd.read_csv('output/df_gband.csv', index_col=0, parse_dates=True)
+    df_r = pd.read_csv('output/df_rband.csv', index_col=0, parse_dates=True)
+    df_z = pd.read_csv('output/df_zband.csv', index_col=0, parse_dates=True)
+    #df.index.to_julian_date()
+    #df_grz = pd.concat([df_g, df_r, df_z], axis=1, ignore_index=True)
+    df_grz = df_g.join([df_r, df_z])
+except:
+    print('ERROR: check missing data in output folder')
+    
+print('-----------------------')
+print('Showing lightcurve')
+print('-----------------------\n')
+
+if band == 'g':
+    res = df_phot(target=target, ref=ref, df=df_g, normed=normed, showfig=True)
+elif band == 'r':
+    res = df_phot(target=target, ref=ref, df=df_r, normed=normed, showfig=True)
+else: #band == 'z':
+    res = df_phot(target=target, ref=ref, df=df_z, normed=normed, showfig=True)
+
+#below are optional
+if True:
+    print('-----------------------')
+    print('Plotting 3 bands')
+    print('-----------------------\n')
+    res = plot_multicolor(df_grz, star_idx=star)
+
+    print('-----------------------')
+    print('Plotting 3 bands (df_phot)')
+    print('-----------------------\n')
+    #res_grz = df_phot_multicolor(target, ref, df_grz, star, normed)
+
+    print('-----------------------')
+    print('Generating scatter matrix')
+    print('-----------------------\n')
+    plot_matrix(df_z)
+
+    #plot specific parameters
+    #plot_params(df_z)
