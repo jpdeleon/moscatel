@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+
+import os
+from glob import glob
+import argparse
+from tqdm import tqdm
+import numpy as np
+
+try:
+    from astropy.io import pf
+except:
+    import pyfits as pf
+
+import pandas as pd
+from matplotlib import pyplot as plt
+from utils import *
+from make_lightcurve import make_lightcurve
+#import multiprocessing
+
+config=np.loadtxt('config.dat', dtype=str)
+raw_img_dir=config[1].split('=')[1].strip("'")
+
+parser = argparse.ArgumentParser(description=
+	"Basic pipeline:\n1. Given raw data directory location in config.dat, get list of frames by filter based on header\n2. Given `box_size`, crop 3 brightest point sources (default) per raw image frame \n3. Recalculate centroid of the cropped image\n4. Do photometry given aperture radius `r`\n5. Plot lightcurves", usage='use "%(prog)s --help" for more information', formatter_class=argparse.RawTextHelpFormatter)
+
+parser.add_argument('--band_idx', help='0: g-band, 1: r-band, 2: z-band', type=int, choices=(0,1,2))
+parser.add_argument('--skip_every', help='skip every nth frame per band e.g. 5', type=int, default=1)
+parser.add_argument('--box_size', help='size of crop box (in pixels) centered on point source; default=80 pix', type=int, default=80)
+parser.add_argument('--check_list', help='get list of frames by filter based on header (make True only for first pass)', type=bool, default=None, choices=(True,False))
+
+#parser.add_argument('--centroids', help'', type=int)
+args = parser.parse_args()
+
+band_idx = args.band_idx
+skip_every = args.skip_every
+box_size = args.box_size
+check_list = args.check_list
+
+#centroids = args.centroids
+centroids = [(703, 303), (915, 264), (707, 758)]
+
+#initialize
+print('-----------------------')
+print('Checking raw data frames')
+print('-----------------------\n')
+
+if check_list == None:
+    #run this first time; make False when running for other two bands
+    bands = init_moscatel(raw_img_dir, skip_every)
+else:
+    pass
+
+##loop in 3 stars given band 
+
+print('-----------------------')
+print('Generating lightcurves')
+print('-----------------------\n')
+dfs, band_idx =  make_lightcurve(centroids, bands, band_idx, box_size)
+
+#plot fluxes
+df = plot_lightcurve(dfs, band_idx)
+
+#save dataframe as csv
+filename='output/df_{0}band.csv'.format(df.columns[0].split('_')[0])
+df.to_csv(filename, mode = 'w', header =df.columns)
+print('-----------------------')
+print('Data saved in {}'.format(filename))
+print('-----------------------\n')
+
+
+'''
+See `analysis` for basic lightcurve analysis. 
+'''
