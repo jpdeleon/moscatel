@@ -7,14 +7,15 @@ from tqdm import tqdm
 import numpy as np
 
 try:
-    from astropy.io import pf
+    from astropy.io import fits as pf
 except:
     import pyfits as pf
 
 import pandas as pd
 from matplotlib import pyplot as plt
-from utils import *
-from make_lightcurve import make_lightcurve
+
+from moscatel.utils import *
+from moscatel.phot import make_lightcurve
 #import multiprocessing
 
 config=np.loadtxt('config.dat', dtype=str)

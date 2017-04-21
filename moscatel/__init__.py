@@ -1,2 +1,2 @@
-from make_lightcurve import make_lightcurve
-from utils import *
+from . import phot
+from . import utils

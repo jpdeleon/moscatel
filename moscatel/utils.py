@@ -3,6 +3,7 @@
 import numpy as np
 from photutils.centroids import centroid_com as com
 from photutils import CircularAperture
+from photutils import CircularAnnulus
 from photutils import aperture_photometry
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -75,6 +76,20 @@ def get_phot(image, centroid, r):
     #xcenter = phot_table['xcenter']
     #ycenter = phot_table['ycenter']
     #centroid = (xcenter, ycenter)
+    aperture_sum = float(phot_table['aperture_sum'])
+    
+    return aperture_sum #,centroid
+
+def get_bkg(image, centroid, r_in=10., r_out=20.):
+    annulus = CircularAnnulus(centroid, r_in, r_out)
+    result = aperture_photometry(image_crop, annulus)
+    bkg_mean = result['aperture_sum'] / annulus.area()
+    return bkg_mean
+
+def get_phot2(image, bkg_mean, centroid, r=10):
+        
+    apertures = CircularAperture(centroid, r)
+    phot_table = aperture_photometry(image - bkg_mean, apertures)
     aperture_sum = float(phot_table['aperture_sum'])
     
     return aperture_sum #,centroid
