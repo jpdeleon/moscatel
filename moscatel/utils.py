@@ -15,19 +15,19 @@ from glob import glob
 from tqdm import tqdm
 
 try:
-	from astropy.io import fits
+	from astropy.io import fits as pf
 except:
-	import pyfits as fits
+	import pyfits as pf
 
 def init_moscatel(filedir, skip_every=None):
 	file_list = glob(os.path.join(filedir,'*.fits'))
 	file_list.sort()
 	if os.listdir(filedir) != []:
 	#if len(file_list)>0:
-		print('total no. of raw data frames: {}\n'.format(len(file_list)))
+		print('total no. of raw data frames: {0}\n'.format(len(file_list)))
 
 		if skip_every:
-			print('Skipping {}th frames raw frames per band'.format(skip_every))
+			print('Skipping {0}th frames raw frames per band'.format(skip_every))
 
 		elif skip_every == None:
 			print('Analyzing all raw frames per band')
@@ -39,7 +39,7 @@ def init_moscatel(filedir, skip_every=None):
 
 		#get list of frames by filter based on header
 		for i in tqdm(file_list[::skip_every]):
-			hdr = fits.open(i)[0].header
+			hdr = pf.open(i)[0].header
 			if hdr['FILTER'] == 'g':
 				gband.append(i)
 			elif hdr['FILTER'] == 'r':
@@ -52,6 +52,8 @@ def init_moscatel(filedir, skip_every=None):
 
 	else:
 		print('ERROR: check your data directory')
+		bands=''
+
 	return bands
 
 def get_crop(image, centroid, box_size):
@@ -62,7 +64,7 @@ def get_crop(image, centroid, box_size):
 
 def get_centroid(image):
     '''
-    Calculate the centroid of a 2D array as its “center of mass” determined from image moments.
+    Calculate the centroid of a 2D array as its 'center of mass' determined from image moments.
     '''
     centroid = com(image)
     return centroid
@@ -82,7 +84,7 @@ def get_phot(image, centroid, r):
 
 def get_bkg(image, centroid, r_in=10., r_out=20.):
     annulus = CircularAnnulus(centroid, r_in, r_out)
-    result = aperture_photometry(image_crop, annulus)
+    result = aperture_photometry(image, annulus)
     bkg_mean = result['aperture_sum'] / annulus.area()
     return bkg_mean
 

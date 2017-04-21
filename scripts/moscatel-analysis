@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser(description="Do differential photometry by divi
 parser.add_argument('--target', help='target star id', type=str, choices=('a','b','c'))
 parser.add_argument('--ref', help='reference star id', type=str, choices=('a','b','c'))
 parser.add_argument('--band', help='choose band', type=str, default='all', choices=('g','r','z', 'all'))
-parser.add_argument('--star', help='normalize lightcurve?', type=int, default=None, choices=(0,1,2))
+parser.add_argument('--star', help='choose star', type=int, default=None, choices=(0,1,2))
 parser.add_argument('--normed', help='normalize lightcurve?', type=bool, default=False, choices=(True, False))
 
 args = parser.parse_args()
@@ -22,16 +22,18 @@ band = args.band
 star = args.star
 
 ##load output of `moscatel` in output/*.csv
+output_dir = '/home/Jerome/moscatel_output'
+
 try:
-    df_g = pd.read_csv('output/df_gband.csv', index_col=0, parse_dates=True)
-    df_r = pd.read_csv('output/df_rband.csv', index_col=0, parse_dates=True)
-    df_z = pd.read_csv('output/df_zband.csv', index_col=0, parse_dates=True)
+    df_g = pd.read_csv(output_dir+'/df_gband.csv', index_col=0, parse_dates=True)
+    df_r = pd.read_csv(output_dir+'/df_rband.csv', index_col=0, parse_dates=True)
+    df_z = pd.read_csv(output_dir+'/df_zband.csv', index_col=0, parse_dates=True)
     #df.index.to_julian_date()
     #df_grz = pd.concat([df_g, df_r, df_z], axis=1, ignore_index=True)
     df_grz = df_g.join([df_r, df_z])
 except:
     print('ERROR: check missing data in output folder')
-    
+
 print('-----------------------')
 print('Showing lightcurve')
 print('-----------------------\n')
@@ -40,8 +42,10 @@ if band == 'g':
     res = df_phot(target=target, ref=ref, df=df_g, normed=normed, showfig=True)
 elif band == 'r':
     res = df_phot(target=target, ref=ref, df=df_r, normed=normed, showfig=True)
-else: #band == 'z':
+elif band == 'z': #band == 'z':
     res = df_phot(target=target, ref=ref, df=df_z, normed=normed, showfig=True)
+else:
+    print('ERROR: check missing data in output folder')
 
 #below are optional
 if True:

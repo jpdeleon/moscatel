@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from utils import get_crop, get_centroid, get_phot
+from utils import get_crop, get_centroid, get_phot, get_bkg, get_phot2
 from tqdm import tqdm
 try:
     from astropy.io import fits
@@ -36,6 +36,8 @@ def make_lightcurve(centroids, bands, band_idx, box_size):
 
             #crop
             image_crop = get_crop(img, centroids[star_idx], box_size)
+
+            ###aperture photometry###
             #compute centroid
             centroid = get_centroid(image_crop)
             centroids.append(centroid)
@@ -43,8 +45,15 @@ def make_lightcurve(centroids, bands, band_idx, box_size):
             xcenters.append(centroid[0])
             ycenters.append(centroid[1])
 
-            #do photometry
+            #compute background
+            #bkg_mean=get_bkg(image_crop, centroid, r_in=20., r_out=30.)
+
+            #without aperture photometry
             aperture_sum = get_phot(image_crop, centroid, r=20)
+
+            #minus background wihtin annulus
+            #aperture_sum = get_phot2(image_crop,bkg_mean,centroid,r=20)
+
             aperture_sums.append(aperture_sum)
 
         #output as dataframe of given band and star

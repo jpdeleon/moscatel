@@ -5,6 +5,7 @@ from glob import glob
 import argparse
 from tqdm import tqdm
 import numpy as np
+import sys
 
 try:
     from astropy.io import fits as pf
@@ -18,8 +19,16 @@ from moscatel.utils import *
 from moscatel.phot import make_lightcurve
 #import multiprocessing
 
-config=np.loadtxt('config.dat', dtype=str)
-raw_img_dir=config[1].split('=')[1].strip("'")
+#config=np.loadtxt('config.dat', dtype=str)
+#raw_img_dir=config[1].split('=')[1].strip("'")
+raw_img_dir = '/mnt/sda1/data/df_HATP44/HATP44_data'
+output_dir = '/home/Jerome/moscatel_output'
+
+#centroids = args.centroids
+centroids = [(703, 303), (915, 264), (707, 758)]
+
+
+
 
 parser = argparse.ArgumentParser(description=
 	"Basic pipeline:\n1. Given raw data directory location in config.dat, get list of frames by filter based on header\n2. Given `box_size`, crop 3 brightest point sources (default) per raw image frame \n3. Recalculate centroid of the cropped image\n4. Do photometry given aperture radius `r`\n5. Plot lightcurves", usage='use "%(prog)s --help" for more information', formatter_class=argparse.RawTextHelpFormatter)
@@ -27,7 +36,8 @@ parser = argparse.ArgumentParser(description=
 parser.add_argument('--band_idx', help='0: g-band, 1: r-band, 2: z-band', type=int, choices=(0,1,2))
 parser.add_argument('--skip_every', help='skip every nth frame per band e.g. 5', type=int, default=1)
 parser.add_argument('--box_size', help='size of crop box (in pixels) centered on point source; default=80 pix', type=int, default=80)
-parser.add_argument('--check_list', help='get list of frames by filter based on header (make True only for first pass)', type=bool, default=None, choices=(True,False))
+#parser.add_argument('--check_list', help='get list of frames by filter (i.e. g,r,z) based on header (make True only for first pass)', type=bool, default=None, choices=(True,False))
+#parser.add_argument('--data_path', help='location of data', type=str, required=True)
 
 #parser.add_argument('--centroids', help'', type=int)
 args = parser.parse_args()
@@ -35,34 +45,56 @@ args = parser.parse_args()
 band_idx = args.band_idx
 skip_every = args.skip_every
 box_size = args.box_size
-check_list = args.check_list
+#check_list = args.check_list
+#data_path = args.data_path
 
-#centroids = args.centroids
-centroids = [(703, 303), (915, 264), (707, 758)]
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
+else:
+    pass
+    
 #initialize
 print('-----------------------')
 print('Checking raw data frames')
 print('-----------------------\n')
 
-if check_list == None:
-    #run this first time; make False when running for other two bands
-    bands = init_moscatel(raw_img_dir, skip_every)
-else:
-    pass
+bands = init_moscatel(raw_img_dir, skip_every)
+'''if check_list == True or check_list == None:
+    #run this first time; make False when running when running again for other two bands
 
-##loop in 3 stars given band 
+    #check if file exists
+    if os.path.isfile(output_dir+'filter_paths.txt'):
+        print('File header already read and saved. Try --check_list False')
+
+    bands = init_moscatel(raw_img_dir, skip_every)
+    np.savetxt(output_dir+'/band1_paths.txt',bands[0],fmt='%s')
+    np.savetxt(output_dir+'/band2_paths.txt',bands[1],fmt='%s')
+    np.savetxt(output_dir+'/band3_paths.txt',bands[2],fmt='%s')
+
+else: #check_list == False
+    if os.path.isfile(output_dir+'/band1_paths.txt'):
+        band1=np.loadtxt(output_dir+'/band1_paths.txt')
+        band2=np.loadtxt(output_dir+'/band2_paths.txt')
+        band3=np.loadtxt(output_dir+'/band3_paths.txt')
+        bands=[band1,band2,band3]'''
+
+##loop in 3 stars given band
 
 print('-----------------------')
 print('Generating lightcurves')
 print('-----------------------\n')
+
+
 dfs, band_idx =  make_lightcurve(centroids, bands, band_idx, box_size)
+
 
 #plot fluxes
 df = plot_lightcurve(dfs, band_idx)
 
 #save dataframe as csv
-filename='output/df_{0}band.csv'.format(df.columns[0].split('_')[0])
+
+filename=output_dir+'/df_{0}band.csv'.format(df.columns[0].split('_')[0])
 df.to_csv(filename, mode = 'w', header =df.columns)
 print('-----------------------')
 print('Data saved in {}'.format(filename))
@@ -70,5 +102,5 @@ print('-----------------------\n')
 
 
 '''
-See `analysis` for basic lightcurve analysis. 
+See `analysis` for basic lightcurve analysis.
 '''
