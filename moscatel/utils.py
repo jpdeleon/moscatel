@@ -15,45 +15,45 @@ from glob import glob
 from tqdm import tqdm
 
 try:
-	from astropy.io import pf
+	from astropy.io import fits
 except:
-	import pyfits as pf
-    
+	import pyfits as fits
+
 def init_moscatel(filedir, skip_every=None):
 	file_list = glob(os.path.join(filedir,'*.fits'))
 	file_list.sort()
 	if os.listdir(filedir) != []:
 	#if len(file_list)>0:
 		print('total no. of raw data frames: {}\n'.format(len(file_list)))
-        
+
 		if skip_every:
 			print('Skipping {}th frames raw frames per band'.format(skip_every))
-		
+
 		elif skip_every == None:
 			print('Analyzing all raw frames per band')
 			skip_every=1
-	
+
 		gband=[]
 		rband=[]
 		zband=[]
-	
+
 		#get list of frames by filter based on header
 		for i in tqdm(file_list[::skip_every]):
-			hdr = pf.open(i)[0].header
+			hdr = fits.open(i)[0].header
 			if hdr['FILTER'] == 'g':
 				gband.append(i)
 			elif hdr['FILTER'] == 'r':
 				rband.append(i)
 			else: #hdr['FILTER'] == 'z_s':
 				zband.append(i)
-			
+
 		print('gband={0} frames\nrband={1} frames\nzband={2} frames'.format(len(gband), len(rband), len(zband)))
 		bands=(gband,rband,zband)
-		
+
 	else:
 		print('ERROR: check your data directory')
 	return bands
-	
+
 def get_crop(image, centroid, box_size):
     x, y = centroid
     image_crop = np.copy(image[int(y-(box_size/2)):int(y+(box_size/2)),int(x-(box_size/2)):int(x+(box_size/2))])
@@ -69,15 +69,15 @@ def get_centroid(image):
 
 def get_phot(image, centroid, r):
     fwhm = 8.0
-    
+
     apertures = CircularAperture(centroid, r)
     phot_table = aperture_photometry(image, apertures)
-    
+
     #xcenter = phot_table['xcenter']
     #ycenter = phot_table['ycenter']
     #centroid = (xcenter, ycenter)
     aperture_sum = float(phot_table['aperture_sum'])
-    
+
     return aperture_sum #,centroid
 
 def get_bkg(image, centroid, r_in=10., r_out=20.):
@@ -87,11 +87,11 @@ def get_bkg(image, centroid, r_in=10., r_out=20.):
     return bkg_mean
 
 def get_phot2(image, bkg_mean, centroid, r=10):
-        
+
     apertures = CircularAperture(centroid, r)
     phot_table = aperture_photometry(image - bkg_mean, apertures)
     aperture_sum = float(phot_table['aperture_sum'])
-    
+
     return aperture_sum #,centroid
 
 def plot_lightcurve(dfs, band_idx, showfig=None):
@@ -106,17 +106,17 @@ def plot_lightcurve(dfs, band_idx, showfig=None):
 
     else:
         cols = 'z_a_flux z_b_flux z_c_flux'.split()
-    
+
     if showfig==None or showfig==True:
         axx = df[cols].plot(subplots=True, figsize=(15,8))
         #axx.set_ylabel('Raw Flux')
         #axx.set_xlabel('Time (HJD)')
-        
+
     plt.show()
     return df
 
 def plot_multicolor(df, star_idx, showfig=None):
-    
+
     if star_idx==0:
         cols = 'g_a_flux r_a_flux z_a_flux'.split()
 
@@ -125,16 +125,16 @@ def plot_multicolor(df, star_idx, showfig=None):
 
     else:
         cols = 'z_c_flux z_c_flux z_c_flux'.split()
-    
+
     if showfig==None or showfig==True:
     	#normalize
     	df = df/df.max().astype(np.float64)
     	axs = df[cols].plot(subplots=False,figsize=(15,8), marker='o')
         #axs.set_ylabel('Raw Flux')
         #axs.set_xlabel('Time (HJD)')
-    
+
     plt.show()
-    
+
 
 def df_phot(target, ref, df, normed, showfig=None):
     if target=='a':
@@ -143,17 +143,17 @@ def df_phot(target, ref, df, normed, showfig=None):
         t=df.columns[3]
     else:
         t=df.columns[6]
-        
+
     if ref=='a':
         r=df.columns[0]
     elif ref=='b':
         r=df.columns[3]
     else:
         r=df.columns[6]
-    
+
     #differential photometry
     res=df[t]/df[r]
-    
+
     #normalization
     if normed == True:
         #(res-res.mean())/res.std()
@@ -171,7 +171,7 @@ def df_phot(target, ref, df, normed, showfig=None):
 def plot_matrix(df):
     scatter_matrix(df, figsize=(15,15), marker='o', alpha=0.5);
     plt.show()
-    
+
 def df_phot_multicolor(target, ref, df_grz, star, normed, showfig=None):
     if target=='a':
         t=df_grz.columns[[0,10,18]]
@@ -179,17 +179,17 @@ def df_phot_multicolor(target, ref, df_grz, star, normed, showfig=None):
         t=df_grz.columns[[3,12,21]]
     else:
         t=df_grz.columns[[6,15,24]]
-        
+
     if ref=='a':
         r=df_grz.columns[[0,10,18]]
     elif ref=='b':
         r=df_grz.columns[[3,12,21]]
     else:
         r=df_grz.columns[[6,15,24]]
-    
+
     #differential photometry
     res_grz=df_grz[t]/df_grz[r]
-    
+
     #normalization
     if normed == True:
         #(res-res.mean())/res.std()
@@ -198,9 +198,9 @@ def df_phot_multicolor(target, ref, df_grz, star, normed, showfig=None):
         pass
     if showfig==None or showfig==True:
         plot_multicolor(res_grz, star, showfig=True)
-        
+
     return res_grz
-    
+
 def plot_params(df):
     print('Parameters to choose from:\n{}'.format(df.columns))
     try:
