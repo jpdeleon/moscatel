@@ -14,7 +14,7 @@ dfs = []
 band_name = ['g','r','z']
 star_names = 'abc'
 
-def make_lightcurve(centroids, bands, band_idx, box_size):
+def make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius):
     for star_idx in range(3):
         xcenters, ycenters = [],[]
         aperture_sums = []
@@ -49,7 +49,7 @@ def make_lightcurve(centroids, bands, band_idx, box_size):
             #bkg_mean=get_bkg(image_crop, centroid, r_in=20., r_out=30.)
 
             #without aperture photometry
-            aperture_sum = get_phot(image_crop, centroid, r=20)
+            aperture_sum = get_phot(image_crop, centroid, r=aperture_radius)
 
             #minus background wihtin annulus
             #aperture_sum = get_phot2(image_crop,bkg_mean,centroid,r=20)

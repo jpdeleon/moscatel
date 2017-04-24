@@ -82,6 +82,27 @@ def get_phot(image, centroid, r):
 
     return aperture_sum #,centroid
 
+def sigma_per_r(image, centroid, r_in, r_out, delta_r,show_image=True):
+	r = np.arange(r_in,r_out,delta_r)
+	aperture_sums = []
+	for i in r:
+		aperture_sums.append(get_phot(image, centroid, r=i))
+	if show_image==True:
+		plt.plot(r,aperture_sums,'o')
+		plt.xlabel('aperture radius')
+		plt.ylabel('aperture sum')
+	return aperture_sums
+
+def radial_profile(image, center):
+    y, x = np.indices((image.shape))
+    r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
+    r = r.astype(np.int)
+
+    tbin = np.bincount(r.ravel(), image.ravel())
+    nr = np.bincount(r.ravel())
+    radialprofile = tbin / nr
+    return radialprofile
+
 def get_bkg(image, centroid, r_in=10., r_out=20.):
     annulus = CircularAnnulus(centroid, r_in, r_out)
     result = aperture_photometry(image, annulus)
@@ -120,20 +141,21 @@ def plot_lightcurve(dfs, band_idx, showfig=None):
 def plot_multicolor(df, star_idx, showfig=None):
 
     if star_idx==0:
-        cols = 'g_a_flux r_a_flux z_a_flux'.split()
+        cols = 'g_a_flux g_b_flux g_c_flux'.split()
 
     elif star_idx==1:
-        cols = 'g_b_flux r_b_flux z_b_flux'.split()
+        cols = 'r_a_flux r_b_flux r_c_flux'.split()
 
     else:
-        cols = 'z_c_flux z_c_flux z_c_flux'.split()
+        cols = 'z_a_flux z_b_flux z_c_flux'.split()
 
     if showfig==None or showfig==True:
     	#normalize
-    	df = df/df.max().astype(np.float64)
-    	axs = df[cols].plot(subplots=False,figsize=(15,8), marker='o')
-        #axs.set_ylabel('Raw Flux')
-        #axs.set_xlabel('Time (HJD)')
+    	df = df/df.median().astype(np.float64)
+		#df.index.to_julian_date().values
+    	axs = df[cols].plot(subplots=False, color=['g','r','b'], figsize=(15,8), marker='o')
+        axs.set_ylabel('Raw Flux')
+        axs.set_xlabel('Time (HJD)')
 
     plt.show()
 
@@ -154,12 +176,14 @@ def df_phot(target, ref, df, normed, showfig=None):
         r=df.columns[6]
 
     #differential photometry
-    res=df[t]/df[r]
+    res=(df[t]/df[r])#.values
 
     #normalization
     if normed == True:
         #(res-res.mean())/res.std()
-        res = res/res.max().astype(np.float64)
+        res /= np.median(res)
+	#res = pd.DataFrame({t.column: res}, index=df.index)
+	#res = res.apply(lambda x: (x - x.min()) / (x.median() - x.min()))
     else:
         pass
     if showfig==None or showfig==True:
@@ -174,34 +198,58 @@ def plot_matrix(df):
     scatter_matrix(df, figsize=(15,15), marker='o', alpha=0.5);
     plt.show()
 
-def df_phot_multicolor(target, ref, df_grz, star, normed, showfig=None):
-    if target=='a':
-        t=df_grz.columns[[0,10,18]]
-    elif target=='b':
-        t=df_grz.columns[[3,12,21]]
-    else:
-        t=df_grz.columns[[6,15,24]]
+def df_phot_multicolor(target, ref, df_g, df_r, df_z, star, normed, showfig=None):
+	res1 = df_phot(target=target, ref=ref, df=df_g, normed=normed, showfig=False)
+	res2 = df_phot(target=target, ref=ref, df=df_r, normed=normed, showfig=False)
+	res3 = df_phot(target=target, ref=ref, df=df_z, normed=normed, showfig=False)
+	#convert series to dataframe
+	res1 =res1.to_frame()
+	res2 =res2.to_frame()
+	res3 =res3.to_frame()
 
-    if ref=='a':
-        r=df_grz.columns[[0,10,18]]
-    elif ref=='b':
-        r=df_grz.columns[[3,12,21]]
-    else:
-        r=df_grz.columns[[6,15,24]]
+	df_grz = res1.join([res2, res3])
+	if showfig == True:
+		#ax3 = df_grz.iloc[:-20].plot(figsize=(15,5), marker='o', legend=False, linestyle='none', title='g-,r-,z-band of {0}/{1}'.format(target,ref))
+		ax3 = df_grz.plot(figsize=(15,5), marker='o', color=['g','r','b'], alpha=0.8, legend=False, linestyle='none', title='g-,r-,z-band of {0}/{1}'.format(target,ref))
+		patches, labels = ax3.get_legend_handles_labels()
+		ax3.legend(patches, ['g','r','z'], loc='best')
+		ax3.xaxis.set_major_formatter(dates.DateFormatter('%H:%m'))
+        ax3.set_ylabel('Normalized Flux')
+        ax3.set_xlabel('Time (HJD)')
+        plt.show()
+	return df_grz
 
-    #differential photometry
-    res_grz=df_grz[t]/df_grz[r]
+def df_phot_multicolor2(target, ref, df_g, df_r, df_z, star, normed, showfig=None):
+	res1 = df_phot(target=target, ref=ref, df=df_g, normed=normed, showfig=True)
+	res2 = df_phot(target=target, ref=ref, df=df_r, normed=normed, showfig=True)
+	res3 = df_phot(target=target, ref=ref, df=df_z, normed=normed, showfig=True)
+	return res1, res2, res3
 
-    #normalization
-    if normed == True:
-        #(res-res.mean())/res.std()
-        res_grz = res_grz/res_grz.max().astype(np.float64)
-    else:
-        pass
-    if showfig==None or showfig==True:
-        plot_multicolor(res_grz, star, showfig=True)
-
-    return res_grz
+# def df_phot_multicolor2(target, ref, df_grz, star, normed, showfig=None):
+# 	if target=='a':
+# 		t=df_grz.columns[[0,10,18]]
+# 	elif target=='b':
+# 		t=df_grz.columns[[3,12,21]]
+# 	else:
+# 		t=df_grz.columns[[6,15,24]]
+# 	if ref=='a':
+# 		r=df_grz.columns[[0,10,18]]
+# 	elif ref=='b':
+# 		r=df_grz.columns[[3,12,21]]
+# 	else:
+# 		r=df_grz.columns[[6,15,24]]
+# 	#differential photometry
+# 	res_grz=df_grz[t]/df_grz[r]
+#
+# 	#normalization
+# 	if normed == True:
+# 		#(res-res.mean())/res.std()
+# 		res_grz = res_grz/res_grz.median().astype(np.float64)
+# 	else:
+# 		pass
+# 	if showfig==None or showfig==True:
+# 		plot_multicolor(res_grz, star, showfig=True)
+# 	return res_grz
 
 def plot_params(df):
     print('Parameters to choose from:\n{}'.format(df.columns))

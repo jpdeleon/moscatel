@@ -21,30 +21,28 @@ from moscatel.phot import make_lightcurve
 
 #config=np.loadtxt('config.dat', dtype=str)
 #raw_img_dir=config[1].split('=')[1].strip("'")
+
 raw_img_dir = '/mnt/sda1/data/df_HATP44/HATP44_data'
 output_dir = '/home/Jerome/moscatel_output'
 
 #centroids = args.centroids
 centroids = [(703, 303), (915, 264), (707, 758)]
 
-
-
-
 parser = argparse.ArgumentParser(description=
 	"Basic pipeline:\n1. Given raw data directory location in config.dat, get list of frames by filter based on header\n2. Given `box_size`, crop 3 brightest point sources (default) per raw image frame \n3. Recalculate centroid of the cropped image\n4. Do photometry given aperture radius `r`\n5. Plot lightcurves", usage='use "%(prog)s --help" for more information', formatter_class=argparse.RawTextHelpFormatter)
 
 parser.add_argument('--band_idx', help='0: g-band, 1: r-band, 2: z-band', type=int, choices=(0,1,2))
 parser.add_argument('--skip_every', help='skip every nth frame per band e.g. 5', type=int, default=1)
-parser.add_argument('--box_size', help='size of crop box (in pixels) centered on point source; default=80 pix', type=int, default=80)
-#parser.add_argument('--check_list', help='get list of frames by filter (i.e. g,r,z) based on header (make True only for first pass)', type=bool, default=None, choices=(True,False))
+parser.add_argument('--box_size', help='size of crop box (in pixels) centered on point source; default=80 pix', type=int, default=100)
+parser.add_argument('--r',help='size (in pixels) of aperture radius for photometry', type=int, default=20)
 #parser.add_argument('--data_path', help='location of data', type=str, required=True)
-
 #parser.add_argument('--centroids', help'', type=int)
 args = parser.parse_args()
 
 band_idx = args.band_idx
 skip_every = args.skip_every
 box_size = args.box_size
+aperture_radius = args.r
 #check_list = args.check_list
 #data_path = args.data_path
 
@@ -53,7 +51,7 @@ if not os.path.exists(output_dir):
 
 else:
     pass
-    
+
 #initialize
 print('-----------------------')
 print('Checking raw data frames')
@@ -84,16 +82,13 @@ else: #check_list == False
 print('-----------------------')
 print('Generating lightcurves')
 print('-----------------------\n')
-
-
-dfs, band_idx =  make_lightcurve(centroids, bands, band_idx, box_size)
+dfs, band_idx =  make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius)
 
 
 #plot fluxes
 df = plot_lightcurve(dfs, band_idx)
 
 #save dataframe as csv
-
 filename=output_dir+'/df_{0}band.csv'.format(df.columns[0].split('_')[0])
 df.to_csv(filename, mode = 'w', header =df.columns)
 print('-----------------------')
@@ -104,3 +99,6 @@ print('-----------------------\n')
 '''
 See `analysis` for basic lightcurve analysis.
 '''
+print('-----------------------')
+print('          DONE')
+print('-----------------------\n')
