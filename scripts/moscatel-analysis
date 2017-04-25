@@ -2,7 +2,9 @@
 
 import argparse
 import pandas as pd
-
+import sys
+import os
+import numpy as np
 from moscatel.utils import df_phot, plot_matrix, plot_params, plot_multicolor, df_phot_multicolor, df_phot_multicolor2
 
 parser = argparse.ArgumentParser(description="Do differential photometry by dividing flux of target star by that of the ref star given the star ids (e.g. target=a,ref=b) and show lightcurve",usage='use "%(prog)s --help" for more information', formatter_class=argparse.RawTextHelpFormatter)
@@ -10,7 +12,7 @@ parser = argparse.ArgumentParser(description="Do differential photometry by divi
 parser.add_argument('--target', help='target star id', type=str, choices=('a','b','c'))
 parser.add_argument('--ref', help='reference star id', type=str, choices=('a','b','c'))
 parser.add_argument('--band', help='choose band', type=str, default='all', choices=('g','r','z', 'all'))
-parser.add_argument('--star', help='choose star', type=int, default=None, choices=(0,1,2))
+#parser.add_argument('--star', help='choose star', type=int, default=None, choices=(0,1,2))
 parser.add_argument('--normed', help='normalize lightcurve?', type=bool, default=False, choices=(True, False))
 parser.add_argument('--show_raw_lc', help='show raw lightcurve?', type=bool, default=False, choices=(True, False))
 parser.add_argument('--clip', help='clip datapoints (leading,trailing)', type=str, default=None)
@@ -22,38 +24,66 @@ target = args.target
 ref = args.ref
 normed = args.normed
 band = args.band
-star = args.star
+#star = args.star
 show_raw_lc = args.show_raw_lc
 clip = args.clip
 clip_sigma=args.clip_sigma
+
+#parse tuple separated by comma
 if clip is not None:
     clip = [int(i) for i in clip.split(',')]
 
 ##load output of `moscatel` in output/*.csv
 output_dir = '/home/Jerome/moscatel_output'
 
+if not os.path.exists(output_dir):
+    print('\nERROR: check missing output file of `moscatel-phot` in : {}\n'.format(output_dir))
+    sys.exit()
+
 try:
-    df_g = pd.read_csv(output_dir+'/df_gband.csv', index_col=0, parse_dates=True)
-    df_r = pd.read_csv(output_dir+'/df_rband.csv', index_col=0, parse_dates=True)
-    df_z = pd.read_csv(output_dir+'/df_zband.csv', index_col=0, parse_dates=True)
+    df_g = pd.read_csv(output_dir+'/gband.csv', index_col=0, parse_dates=True)
+    df_r = pd.read_csv(output_dir+'/rband.csv', index_col=0, parse_dates=True)
+    df_z = pd.read_csv(output_dir+'/zband.csv', index_col=0, parse_dates=True)
+    df_grz = pd.read_csv(output_dir+'/grzband.csv', index_col=0, parse_dates=True)
     #df.index.to_julian_date()
     #df_grz = pd.concat([df_g, df_r, df_z], axis=1, ignore_index=True)
+except:
+    print('\NOTE: check missing data in {}'.format(output_dir))
+    
+try:
     df_grz = df_g.join([df_r, df_z])
-    if clip is not None:
-        df_g = df_g.iloc[clip[0]:-clip[1]]
-        df_r = df_r.iloc[clip[0]:-clip[1]]
-        df_z = df_z.iloc[clip[0]:-clip[1]]
-        df_grz = df_grz.iloc[clip[0]:-clip[1]]
-    if clip_sigma is not None:
-        df_g = df_g[np.abs(df_g-df_g.mean())<=(clip_sigma*df_g.std())]
-        df_r = df_r[np.abs(df_r-df_r.mean())<=(clip_sigma*df_r.std())]
-        df_z = df_z[np.abs(df_z-df_z.mean())<=(clip_sigma*df_z.std())]
-        df_grz = df_grz[np.abs(df_grz-df_grz.mean())<=(clip_sigma*df_grz.std())]
-
-    filename=output_dir+'/df_grz.csv'
+    filename=output_dir+'/grzband.csv'
     df_grz.to_csv(filename, mode = 'w', header =df_grz.columns)
 except:
-    print('ERROR: check missing data in output folder')
+    print('\NOTE: check missing data in {}'.format(output_dir))
+
+if clip is not None:
+    df_g = df_g.iloc[clip[0]:-clip[1]]
+    df_r = df_r.iloc[clip[0]:-clip[1]]
+    df_z = df_z.iloc[clip[0]:-clip[1]]
+    try:
+        df_grz = df_grz.iloc[clip[0]:-clip[1]]
+    except:
+        pass
+
+if clip_sigma is not None:
+    print('\n-----------------------')
+    print('Removing outliers outside +/-sigma={} in each band...'.format(clip_sigma))
+    print('-----------------------')
+    df_g = df_g[np.abs(df_g-df_g.mean())<=(clip_sigma*df_g.std())]
+    n_g = df_g[~(np.abs(df_g-df_g.mean())<=(clip_sigma*df_g.std()))]
+    print('removed {} outliers in g-band'.format(len(n_g)))
+    df_r = df_r[np.abs(df_r-df_r.mean())<=(clip_sigma*df_r.std())]
+    n_r = df_r[~(np.abs(df_r-df_r.mean())<=(clip_sigma*df_r.std()))]
+    print('removed {} outliers in r-band'.format(len(n_r)))
+    n_z = df_z[~(np.abs(df_z-df_z.mean())<=(clip_sigma*df_z.std()))]
+    df_z = df_z[np.abs(df_z-df_z.mean())<=(clip_sigma*df_z.std())]
+    print('removed {} outliers in z-band'.format(len(n_z)))
+    #check if grz
+    try:
+        df_grz = df_grz[np.abs(df_grz-df_grz.mean())<=(clip_sigma*df_grz.std())]
+    except:
+        pass
 
 print('-----------------------')
 print('Showing lightcurve')
@@ -68,11 +98,15 @@ elif band == 'z':
 elif band== 'all':
     print('Checking all bands...')
 else:
-    print('ERROR: check missing data in output folder')
+    print('ERROR: check missing data in {}'.format(output_dir))
 
 #below are optional
 if band=='all':
     if show_raw_lc == True:
+        '''
+        bug: plot does not show up. error not reported even non-bool input
+        e.g. 1 instead of T/F
+        '''
         print('-----------------------')
         print('Plotting raw lightcurves of 3 bands')
         print('-----------------------\n')
@@ -83,7 +117,7 @@ if band=='all':
     print('Plotting 3 bands (df_phot)')
     print('-----------------------\n')
 
-    df_grz = df_phot_multicolor(target, ref, df_g, df_r, df_z, star, normed, showfig=True)
+    df_grz = df_phot_multicolor(target, ref, df_g, df_r, df_z, normed, showfig=True)
     #df_grz.to_csv('grz_band.csv', mode = 'w', header =df_grz.columns)
     #res1, res2, res3 = df_phot_multicolor2(target, ref, df_g, df_r, df_z, star, normed)
     '''print('-----------------------')

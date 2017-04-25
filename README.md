@@ -3,17 +3,22 @@ Rough description:
 Command-line implementation of basic MuSCAT photometry pipeline and transit lightcurve analysis
 
 ## Progress
-2017/03/21: basic analysis during Okayama observation
-2017/04/09: basic high-level scripting
-2017/04/20: created setup.py
+2017
+* 03/21: basic analysis during Okayama observation
+* 04/09: basic high-level scripting
+* 04/20: created setup.py
+* 04/25: fixed moscatel-analysis
 
 ## Sample run
 ### Part 1 Photometry
-
-* e.g. $ python moscatel-phot --band_idx=2 --skip_every=5
+```shell
+$ python moscatel-phot --band_idx=2 --skip_every=5
+```
 
 ### Part 2 Lightcurve analysis
-* e.g. $ python moscatel-analysis --target=b --ref=a star=0
+```shell
+$ python moscatel-analysis --target=b --ref=a star=0
+```
 
 See also other plotting helper functions in /moscatel/utils.py.
 

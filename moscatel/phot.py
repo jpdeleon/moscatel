@@ -18,6 +18,7 @@ def make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius):
     for star_idx in range(3):
         xcenters, ycenters = [],[]
         aperture_sums = []
+        background = []
         obs_time = []
         obs_mjd = []
         sum_per_band = {}
@@ -46,17 +47,22 @@ def make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius):
             ycenters.append(centroid[1])
 
             #compute background
-            #bkg_mean=get_bkg(image_crop, centroid, r_in=20., r_out=30.)
+            bkg_mean=get_bkg(image_crop, centroid, r_in=20., r_out=30.)
 
             #without aperture photometry
             aperture_sum = get_phot(image_crop, centroid, r=aperture_radius)
 
             #minus background wihtin annulus
-            #aperture_sum = get_phot2(image_crop,bkg_mean,centroid,r=20)
+            #aperture_sum = get_phot2(image_crop,bkg_mean,centroid,r=aperture_radius)
 
             aperture_sums.append(aperture_sum)
+            background.append(bkg_mean)
 
         #output as dataframe of given band and star
+        '''
+        fix column to add aperture radius: e.g.
+        '{0}_{1}_flux_r{2}'.format(band_name[band_idx], star_names[star_idx], aperture_radius) : aperture_sums},
+        '''
         dfs.append(pd.DataFrame(
             {'{0}_{1}_x'.format(band_name[band_idx], star_names[star_idx]) : xcenters,
              '{0}_{1}_y'.format(band_name[band_idx], star_names[star_idx]) : ycenters,

@@ -32,9 +32,10 @@ parser = argparse.ArgumentParser(description=
 	"Basic pipeline:\n1. Given raw data directory location in config.dat, get list of frames by filter based on header\n2. Given `box_size`, crop 3 brightest point sources (default) per raw image frame \n3. Recalculate centroid of the cropped image\n4. Do photometry given aperture radius `r`\n5. Plot lightcurves", usage='use "%(prog)s --help" for more information', formatter_class=argparse.RawTextHelpFormatter)
 
 parser.add_argument('--band_idx', help='0: g-band, 1: r-band, 2: z-band', type=int, choices=(0,1,2))
-parser.add_argument('--skip_every', help='skip every nth frame per band e.g. 5', type=int, default=1)
+parser.add_argument('--skip_every', help='skip every nth frame per band e.g. 5', type=int, default=None)
 parser.add_argument('--box_size', help='size of crop box (in pixels) centered on point source; default=80 pix', type=int, default=100)
 parser.add_argument('--r',help='size (in pixels) of aperture radius for photometry', type=int, default=20)
+parser.add_argument('--showfig', help='show raw lightcurve after aperture photometry?', type=bool, default=False)
 #parser.add_argument('--data_path', help='location of data', type=str, required=True)
 #parser.add_argument('--centroids', help'', type=int)
 args = parser.parse_args()
@@ -43,6 +44,8 @@ band_idx = args.band_idx
 skip_every = args.skip_every
 box_size = args.box_size
 aperture_radius = args.r
+showfig = args.showfig
+
 #check_list = args.check_list
 #data_path = args.data_path
 
@@ -79,19 +82,27 @@ else: #check_list == False
 
 ##loop in 3 stars given band
 
-print('-----------------------')
+print('\n-----------------------')
 print('Generating lightcurves')
 print('-----------------------\n')
-dfs, band_idx =  make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius)
 
+if aperture_radius is not None:
+    print('\nUsing aperture radius: {} pixels\n'.format(aperture_radius))
+else:
+    print('\nUsing default aperture radius: {} pixels\n'.format(aperture_radius))
+
+dfs, band_idx =  make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius)
 
 #plot fluxes
 df = plot_lightcurve(dfs, band_idx)
 
 #save dataframe as csv
-filename=output_dir+'/df_{0}band.csv'.format(df.columns[0].split('_')[0])
+filename=output_dir+'/{0}band.csv'.format(df.columns[0].split('_')[0])
+if os.path.isfile(filename):
+    print('\nOverwriting {}'.format(filename))
+
 df.to_csv(filename, mode = 'w', header =df.columns)
-print('-----------------------')
+print('\n-----------------------')
 print('Data saved in {}'.format(filename))
 print('-----------------------\n')
 
