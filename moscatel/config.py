@@ -1,4 +1,4 @@
-#This is the config file for the moscatel (MUSCAT2) pipeline. The parameters below are loaded in almost each of steps of reduction. 
+#This is the config file for the moscatel (MUSCAT2) pipeline. The parameters below are loaded in almost each of steps of reduction.
 #Input/Edit the information as deemed necessary. Run "run codename.py -h" for help.
 #
 HOME_dir=/mnt/B838B30438B2C124/research/transit/df_HATP44/

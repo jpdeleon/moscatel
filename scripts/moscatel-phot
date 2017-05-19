@@ -17,13 +17,18 @@ from matplotlib import pyplot as plt
 
 from moscatel.utils import *
 from moscatel.phot import make_lightcurve
+import getpass
+import os
+
 #import multiprocessing
 
 #config=np.loadtxt('config.dat', dtype=str)
 #raw_img_dir=config[1].split('=')[1].strip("'")
 
-raw_img_dir = '/mnt/sda1/data/df_HATP44/HATP44_data'
-output_dir = '/home/Jerome/moscatel_output'
+#raw_img_dir = '/mnt/sda1/data/df_HATP44/HATP44_data'
+username = getpass.getuser()
+raw_img_dir = os.path.join('/home',username,'data/hatp44_data')
+output_dir = os.path.join('/home',username,'moscatel_output')
 
 #centroids = args.centroids
 centroids = [(703, 303), (915, 264), (707, 758)]

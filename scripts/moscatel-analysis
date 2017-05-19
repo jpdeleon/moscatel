@@ -5,6 +5,7 @@ import pandas as pd
 import sys
 import os
 import numpy as np
+import getpass
 from moscatel.utils import df_phot, plot_matrix, plot_params, plot_multicolor, df_phot_multicolor, df_phot_multicolor2
 
 parser = argparse.ArgumentParser(description="Do differential photometry by dividing flux of target star by that of the ref star given the star ids (e.g. target=a,ref=b) and show lightcurve",usage='use "%(prog)s --help" for more information', formatter_class=argparse.RawTextHelpFormatter)
@@ -34,28 +35,38 @@ if clip is not None:
     clip = [int(i) for i in clip.split(',')]
 
 ##load output of `moscatel` in output/*.csv
-output_dir = '/home/Jerome/moscatel_output'
+username = getpass.getuser()
+output_dir = os.path.join('/home',username,'moscatel_output')
+
 
 if not os.path.exists(output_dir):
     print('\nERROR: check missing output file of `moscatel-phot` in : {}\n'.format(output_dir))
     sys.exit()
 
-try:
-    df_g = pd.read_csv(output_dir+'/gband.csv', index_col=0, parse_dates=True)
-    df_r = pd.read_csv(output_dir+'/rband.csv', index_col=0, parse_dates=True)
-    df_z = pd.read_csv(output_dir+'/zband.csv', index_col=0, parse_dates=True)
-    df_grz = pd.read_csv(output_dir+'/grzband.csv', index_col=0, parse_dates=True)
-    #df.index.to_julian_date()
-    #df_grz = pd.concat([df_g, df_r, df_z], axis=1, ignore_index=True)
-except:
-    print('\NOTE: check missing data in {}'.format(output_dir))
-    
-try:
-    df_grz = df_g.join([df_r, df_z])
-    filename=output_dir+'/grzband.csv'
-    df_grz.to_csv(filename, mode = 'w', header =df_grz.columns)
-except:
-    print('\NOTE: check missing data in {}'.format(output_dir))
+if band=='r':
+    try:
+         df_r = pd.read_csv(output_dir+'/rband.csv', index_col=0, parse_dates=True)
+    except:
+        print('\NOTE: check missing r-band data in {}'.format(output_dir))
+elif band =='g':
+    try:
+        df_g = pd.read_csv(output_dir+'/gband.csv', index_col=0, parse_dates=True)
+    except:
+        print('\NOTE: check missing g-band data in {}'.format(output_dir))
+elif band=='z':
+    try:
+        df_z = pd.read_csv(output_dir+'/zband.csv', index_col=0, parse_dates=True)
+    except:
+        print('\NOTE: check missing z-band data in {}'.format(output_dir))
+else:
+    try:
+        df_grz = pd.read_csv(output_dir+'/grzband.csv', index_col=0, parse_dates=True)
+        #df.index.to_julian_date()
+        df_grz = df_g.join([df_r, df_z])
+        filename=output_dir+'/grzband.csv'
+        df_grz.to_csv(filename, mode = 'w', header =df_grz.columns)
+    except:
+        print('\NOTE: check missing data in {}'.format(output_dir))
 
 if clip is not None:
     df_g = df_g.iloc[clip[0]:-clip[1]]
