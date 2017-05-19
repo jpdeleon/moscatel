@@ -6,7 +6,7 @@ import sys
 import os
 import numpy as np
 import getpass
-from moscatel.utils import df_phot, plot_matrix, plot_params, plot_multicolor, df_phot_multicolor, df_phot_multicolor2
+from moscatel.plot import df_phot, plot_matrix, plot_params, plot_multicolor, df_phot_multicolor, df_phot_multicolor2
 
 parser = argparse.ArgumentParser(description="Do differential photometry by dividing flux of target star by that of the ref star given the star ids (e.g. target=a,ref=b) and show lightcurve",usage='use "%(prog)s --help" for more information', formatter_class=argparse.RawTextHelpFormatter)
 
@@ -14,7 +14,7 @@ parser.add_argument('--target', help='target star id', type=str, choices=('a','b
 parser.add_argument('--ref', help='reference star id', type=str, choices=('a','b','c'))
 parser.add_argument('--band', help='choose band', type=str, default='all', choices=('g','r','z', 'all'))
 #parser.add_argument('--star', help='choose star', type=int, default=None, choices=(0,1,2))
-parser.add_argument('--normed', help='normalize lightcurve?', type=bool, default=False, choices=(True, False))
+parser.add_argument('--normed', help='normalize lightcurve?', type=bool, default=True, choices=(True, False))
 parser.add_argument('--show_raw_lc', help='show raw lightcurve?', type=bool, default=False, choices=(True, False))
 parser.add_argument('--clip', help='clip datapoints (leading,trailing)', type=str, default=None)
 parser.add_argument('--clip_sigma', help='keep only the ones that are within +- sigma', type=float, default=None)
@@ -60,11 +60,16 @@ elif band=='z':
         print('\NOTE: check missing z-band data in {}'.format(output_dir))
 else:
     try:
-        df_grz = pd.read_csv(output_dir+'/grzband.csv', index_col=0, parse_dates=True)
-        #df.index.to_julian_date()
+        df_r = pd.read_csv(output_dir+'/rband.csv', index_col=0, parse_dates=True)
+        df_g = pd.read_csv(output_dir+'/gband.csv', index_col=0, parse_dates=True)
+        df_z = pd.read_csv(output_dir+'/zband.csv', index_col=0, parse_dates=True)
+        #combine df and save
         df_grz = df_g.join([df_r, df_z])
         filename=output_dir+'/grzband.csv'
         df_grz.to_csv(filename, mode = 'w', header =df_grz.columns)
+        #read
+        df_grz = pd.read_csv(output_dir+'/grzband.csv', index_col=0, parse_dates=True)
+        #df.index.to_julian_date()
     except:
         print('\NOTE: check missing data in {}'.format(output_dir))
 

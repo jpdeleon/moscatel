@@ -12,6 +12,7 @@ try:
 except:
     import pyfits as pf
 
+from moscatel.plot import *
 import pandas as pd
 from matplotlib import pyplot as plt
 
