@@ -7,6 +7,7 @@ import os
 import numpy as np
 import getpass
 from moscatel.plot import df_phot, plot_matrix, plot_params, plot_multicolor, df_phot_multicolor, df_phot_multicolor2
+from moscatel import utils
 
 parser = argparse.ArgumentParser(description="Do differential photometry by dividing flux of target star by that of the ref star given the star ids (e.g. target=a,ref=b) and show lightcurve",usage='use "%(prog)s --help" for more information', formatter_class=argparse.RawTextHelpFormatter)
 
@@ -46,41 +47,44 @@ if not os.path.exists(output_dir):
 if band=='r':
     try:
          df_r = pd.read_csv(output_dir+'/rband.csv', index_col=0, parse_dates=True)
+         if clip is not None:
+             df_r = df_r.iloc[clip[0]:-clip[1]]
     except:
         print('\NOTE: check missing r-band data in {}'.format(output_dir))
 elif band =='g':
     try:
         df_g = pd.read_csv(output_dir+'/gband.csv', index_col=0, parse_dates=True)
+        if clip is not None:
+            df_g = df_g.iloc[clip[0]:-clip[1]]
     except:
         print('\NOTE: check missing g-band data in {}'.format(output_dir))
 elif band=='z':
     try:
         df_z = pd.read_csv(output_dir+'/zband.csv', index_col=0, parse_dates=True)
+        if clip is not None:
+            df_z = df_z.iloc[clip[0]:-clip[1]]
     except:
         print('\NOTE: check missing z-band data in {}'.format(output_dir))
-else:
+else: #band == 'all'
+    print('Checking all bands...')
     try:
-        df_r = pd.read_csv(output_dir+'/rband.csv', index_col=0, parse_dates=True)
-        df_g = pd.read_csv(output_dir+'/gband.csv', index_col=0, parse_dates=True)
-        df_z = pd.read_csv(output_dir+'/zband.csv', index_col=0, parse_dates=True)
-        #combine df and save
-        df_grz = df_g.join([df_r, df_z])
-        filename=output_dir+'/grzband.csv'
-        df_grz.to_csv(filename, mode = 'w', header =df_grz.columns)
-        #read
-        df_grz = pd.read_csv(output_dir+'/grzband.csv', index_col=0, parse_dates=True)
-        #df.index.to_julian_date()
+        df_r, df_g, df_z, df_grz = utils.combine_df(output_dir)
+
+        if clip is not None:
+            try:
+                '''
+                uneven clipping happens because len of each dataset is different;
+                e.g., g-band becomes shorter than r-band lc 
+                '''
+
+                df_g = df_g.iloc[clip[0]:-clip[1]]
+                df_r = df_r.iloc[clip[0]:-clip[1]]
+                df_z = df_z.iloc[clip[0]:-clip[1]]
+                df_grz = df_grz.iloc[clip[0]:-clip[1]]
+            except:
+                print('ERROR: cannot clip: {0},{1}'.format(clip[0], clip[1]))
     except:
         print('\NOTE: check missing data in {}'.format(output_dir))
-
-if clip is not None:
-    df_g = df_g.iloc[clip[0]:-clip[1]]
-    df_r = df_r.iloc[clip[0]:-clip[1]]
-    df_z = df_z.iloc[clip[0]:-clip[1]]
-    try:
-        df_grz = df_grz.iloc[clip[0]:-clip[1]]
-    except:
-        pass
 
 if clip_sigma is not None:
     print('\n-----------------------')
@@ -112,12 +116,6 @@ elif band == 'r':
 elif band == 'z':
     res = df_phot(target=target, ref=ref, df=df_z, normed=normed, showfig=True)
 elif band== 'all':
-    print('Checking all bands...')
-else:
-    print('ERROR: check missing data in {}'.format(output_dir))
-
-#below are optional
-if band=='all':
     if show_raw_lc == True:
         '''
         bug: plot does not show up. error not reported even non-bool input
@@ -143,6 +141,8 @@ if band=='all':
     #plot specific parameters
     #plot_params(df_z)
 
+else:
+    print('ERROR: check missing data in {}'.format(output_dir))
 
 
 print('-----------------------')

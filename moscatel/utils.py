@@ -53,6 +53,18 @@ def init_moscatel(filedir, skip_every=None):
 
     return bands
 
+def combine_df(output_dir):
+    df_r = pd.read_csv(output_dir+'/rband.csv', index_col=0, parse_dates=True)
+    df_g = pd.read_csv(output_dir+'/gband.csv', index_col=0, parse_dates=True)
+    df_z = pd.read_csv(output_dir+'/zband.csv', index_col=0, parse_dates=True)
+    #combine df and save
+    df_grz = df_g.join([df_r, df_z])
+    filename=output_dir+'/grzband.csv'
+    df_grz.to_csv(filename, mode = 'w', header =df_grz.columns)
+    #read
+    df_grz = pd.read_csv(output_dir+'/grzband.csv', index_col=0, parse_dates=True)
+    #df.index.to_julian_date()
+    return df_r, df_g, df_z, df_grz
 # def df_phot_multicolor2(target, ref, df_grz, star, normed, showfig=None):
 #     if target=='a':
 #         t=df_grz.columns[[0,10,18]]

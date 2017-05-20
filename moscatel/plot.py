@@ -76,16 +76,14 @@ def df_phot(target, ref, df, normed=True, showfig=None):
         r=df.columns[6]
 
     #differential photometry
-    #convert df to series to fix imperfect normalization problem
-    res=(df[t]/df[r]).values
+    res=(df[t]/df[r])
 
     #normalization
     if normed == True:
         res /= np.median(res)
-
-    #res = pd.DataFrame({t.column: res}, index=df.index)
     else:
         pass
+
     if showfig==None or showfig==True:
         fig, ax2 = plt.subplots(nrows=1,ncols=1,figsize=(10,5))
         plt.plot(df.index, res, 'ko', linestyle='none')
@@ -96,7 +94,8 @@ def df_phot(target, ref, df, normed=True, showfig=None):
         ax2.set_ylabel('Normalized Flux')
         ax2.set_xlabel('Time (HJD)')
         plt.show()
-    return df[t]/df[r]
+
+    return res
 
 def plot_params(df):
     print('Parameters to choose from:\n{}'.format(df.columns))
