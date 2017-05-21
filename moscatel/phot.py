@@ -30,6 +30,12 @@ def get_centroid(image):
     centroid = com(image)
     return centroid
 
+def get_fwhm():
+    # https://python4astronomers.github.io/fitting/sherpa.html
+    
+    return 0
+
+
 def get_phot(image, centroid, r):
     fwhm = 8.0
 

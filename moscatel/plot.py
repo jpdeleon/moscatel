@@ -28,10 +28,58 @@ def plot_lightcurve(dfs, band_idx, showfig=None):
         #axx.set_ylabel('Raw Flux')
         #axx.set_xlabel('Time (HJD)')
 
+        # fig, ax = plt.subplots(nrows=4, ncols=1, figsize=(10,8), sharex=True)
+        # y= df['z_b_flux'] / df['z_a_flux']
+        # ax[0].plot(df.index,y, color='k', marker='o', linestyle='none', alpha=0.1)
+        # ax[0].plot(df.index,y, color='k', marker='o', linestyle='none', alpha=0.1)
+        # ax[0].set_ylabel('Flux ratio')
+        # ax[1].plot(df.index, df['z_a_x']-df['z_a_x'][0])
+        # ax[1].plot(df.index, df['z_a_y']-df['z_a_y'][0])
+        # ax[1].set_ylabel(r'$\Delta x [pix]''$\n$'r'\Delta y$ [pix]')
+        # plt.suptitle('HAT-P-44/ r-band')
+        # ax[2].set_ylabel('FWHM [pix]')
+        # ax[3].set_ylabel('Airmass')
     plt.show()
     return df
 
+def plot_details(target, ref, df, normed=True):
+    if target=='a':
+        t=df.columns[0]
+    elif target=='b':
+        t=df.columns[3]
+    else:
+        t=df.columns[6]
+
+    if ref=='a':
+        r=df.columns[0]
+    elif ref=='b':
+        r=df.columns[3]
+    else:
+        r=df.columns[6]
+
+    #differential photometry
+    res=(df[t]/df[r])
+    #normalization
+    if normed == True:
+        res /= np.median(res)
+    else:
+        pass
+    fig, ax = plt.subplots(nrows=4, ncols=1, figsize=(10,8), sharex=True)
+    ax[0].plot(df.index,y, color='k', marker='o', linestyle='none', alpha=0.1)
+    ax[0].plot(df.index,y, color='k', marker='o', linestyle='none', alpha=0.1)
+    ax[0].set_ylabel('Flux ratio')
+    ax[1].plot(df.index, df['z_a_x']-df['z_a_x'][0])
+    ax[1].plot(df.index, df['z_a_y']-df['z_a_y'][0])
+    ax[1].set_ylabel(r'$\Delta x [pix]''$\n$'r'\Delta y$ [pix]')
+    plt.suptitle('HAT-P-44/ r-band')
+    ax[2].set_ylabel('FWHM [pix]')
+    ax[3].set_ylabel('Airmass')
+    plt.show()
+    
 def plot_multicolor(df, star_idx, showfig=None):
+    '''
+    plotted when 'show_raw_lc == True' in moscatel-analysis
+    '''
 
     if star_idx==0:
         cols = 'g_a_flux g_b_flux g_c_flux'.split()
@@ -45,20 +93,18 @@ def plot_multicolor(df, star_idx, showfig=None):
     if showfig is not None and showfig == True:#showfig==None or showfig==True:
         #normalize
         df = df/df.median()
-        import pdb; pdb.set_trace()
         #df.index.to_julian_date().values
         axs = df[cols].plot(subplots=False, color=['g','r','b'], figsize=(15,8), marker='o')
         axs.set_ylabel('Raw Flux')
         axs.set_xlabel('Time (HJD)')
 
     plt.show()
+    return df
 
 
-def df_phot(target, ref, df, normed=True, showfig=None):
+def df_phot(target, ref, df, bin, normed=True, showfig=None):
     '''
-    small bug: imperfect normalization
-    either caused by dataframe conversion or median does not correspond to baseline
-
+    small bug:
     revise structure of df: arbitrary number of ref stars
     '''
     if target=='a':
@@ -86,7 +132,9 @@ def df_phot(target, ref, df, normed=True, showfig=None):
 
     if showfig==None or showfig==True:
         fig, ax2 = plt.subplots(nrows=1,ncols=1,figsize=(10,5))
-        plt.plot(df.index, res, 'ko', linestyle='none')
+        ax2.plot(df.index, res, 'ko', linestyle='none', alpha=0.1)
+        #plot binned data
+        binned=res.resample(str(bin)+'T').mean().plot(ax=ax2, marker='o', linestyle='none')
         ax2.set_title('{0}-band of {1}/{2}'.format(df.columns[0].split('_')[0],
         target,ref))
         # ax2 = res.plot(figsize=(15,5), color='k', marker='o', linestyle='none', title='{}-band'.format(df.columns[0].split('_')[0]))
@@ -98,6 +146,9 @@ def df_phot(target, ref, df, normed=True, showfig=None):
     return res
 
 def plot_params(df):
+    '''
+    plot certain parameter of interest
+    '''
     print('Parameters to choose from:\n{}'.format(df.columns))
     try:
         cols = raw_input('columns to plot (e.g. z_a_x z_a_y): ')
@@ -112,6 +163,9 @@ def plot_matrix(df):
     plt.show()
 
 def df_phot_multicolor(target, ref, df_g, df_r, df_z, normed, showfig=None):
+    '''
+    plot each band in one figure
+    '''
     res1 = df_phot(target=target, ref=ref, df=df_g, normed=normed, showfig=False)
     res2 = df_phot(target=target, ref=ref, df=df_r, normed=normed, showfig=False)
     res3 = df_phot(target=target, ref=ref, df=df_z, normed=normed, showfig=False)
@@ -133,6 +187,9 @@ def df_phot_multicolor(target, ref, df_g, df_r, df_z, normed, showfig=None):
     return df_grz
 
 def df_phot_multicolor2(target, ref, df_g, df_r, df_z, star, normed, showfig=None):
+    '''
+    plot each band separately
+    '''
     res1 = df_phot(target=target, ref=ref, df=df_g, normed=normed, showfig=True)
     res2 = df_phot(target=target, ref=ref, df=df_r, normed=normed, showfig=True)
     res3 = df_phot(target=target, ref=ref, df=df_z, normed=normed, showfig=True)

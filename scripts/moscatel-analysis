@@ -19,6 +19,7 @@ parser.add_argument('--normed', help='normalize lightcurve?', type=bool, default
 parser.add_argument('--show_raw_lc', help='show raw lightcurve?', type=bool, default=False, choices=(True, False))
 parser.add_argument('--clip', help='clip datapoints (leading,trailing)', type=str, default=None)
 parser.add_argument('--clip_sigma', help='keep only the ones that are within +- sigma', type=float, default=None)
+parser.add_argument('--binning', help='number of minutes per bin', type=int, default=5)
 
 args = parser.parse_args()
 
@@ -30,6 +31,7 @@ band = args.band
 show_raw_lc = args.show_raw_lc
 clip = args.clip
 clip_sigma=args.clip_sigma
+binning=args.binning
 
 #parse tuple separated by comma
 if clip is not None:
@@ -45,76 +47,38 @@ if not os.path.exists(output_dir):
     sys.exit()
 
 if band=='r':
-    try:
-         df_r = pd.read_csv(output_dir+'/rband.csv', index_col=0, parse_dates=True)
-         if clip is not None:
-             df_r = df_r.iloc[clip[0]:-clip[1]]
-    except:
-        print('\NOTE: check missing r-band data in {}'.format(output_dir))
+    df_r = utils.load_df(output_dir, band, clip)
+
 elif band =='g':
-    try:
-        df_g = pd.read_csv(output_dir+'/gband.csv', index_col=0, parse_dates=True)
-        if clip is not None:
-            df_g = df_g.iloc[clip[0]:-clip[1]]
-    except:
-        print('\NOTE: check missing g-band data in {}'.format(output_dir))
+    df_g = utils.load_df(output_dir, band, clip)
+
 elif band=='z':
-    try:
-        df_z = pd.read_csv(output_dir+'/zband.csv', index_col=0, parse_dates=True)
-        if clip is not None:
-            df_z = df_z.iloc[clip[0]:-clip[1]]
-    except:
-        print('\NOTE: check missing z-band data in {}'.format(output_dir))
+    df_z = utils.load_df(output_dir, band, clip)
+
 else: #band == 'all'
     print('Checking all bands...')
     try:
-        df_r, df_g, df_z, df_grz = utils.combine_df(output_dir)
-
-        if clip is not None:
-            try:
-                '''
-                uneven clipping happens because len of each dataset is different;
-                e.g., g-band becomes shorter than r-band lc 
-                '''
-
-                df_g = df_g.iloc[clip[0]:-clip[1]]
-                df_r = df_r.iloc[clip[0]:-clip[1]]
-                df_z = df_z.iloc[clip[0]:-clip[1]]
-                df_grz = df_grz.iloc[clip[0]:-clip[1]]
-            except:
-                print('ERROR: cannot clip: {0},{1}'.format(clip[0], clip[1]))
+        df_r, df_g, df_z, df_grz = utils.combine_df(output_dir, clip)
     except:
         print('\NOTE: check missing data in {}'.format(output_dir))
 
 if clip_sigma is not None:
-    print('\n-----------------------')
-    print('Removing outliers outside +/-sigma={} in each band...'.format(clip_sigma))
-    print('-----------------------')
-    df_g = df_g[np.abs(df_g-df_g.mean())<=(clip_sigma*df_g.std())]
-    n_g = df_g[~(np.abs(df_g-df_g.mean())<=(clip_sigma*df_g.std()))]
-    print('removed {} outliers in g-band'.format(len(n_g)))
-    df_r = df_r[np.abs(df_r-df_r.mean())<=(clip_sigma*df_r.std())]
-    n_r = df_r[~(np.abs(df_r-df_r.mean())<=(clip_sigma*df_r.std()))]
-    print('removed {} outliers in r-band'.format(len(n_r)))
-    n_z = df_z[~(np.abs(df_z-df_z.mean())<=(clip_sigma*df_z.std()))]
-    df_z = df_z[np.abs(df_z-df_z.mean())<=(clip_sigma*df_z.std())]
-    print('removed {} outliers in z-band'.format(len(n_z)))
-    #check if grz
-    try:
-        df_grz = df_grz[np.abs(df_grz-df_grz.mean())<=(clip_sigma*df_grz.std())]
-    except:
-        pass
+    '''
+    bug: won't work if not all df_g, r, z.csv are available
+    temporarily skip
+    '''
+    df_g, df_r, df_z, df_grz=utils.clip_outlier(clip_sigma, target, ref, df_g, df_r, df_z, df_grz)
 
 print('-----------------------')
 print('Showing lightcurve')
 print('-----------------------\n')
 
 if band == 'g':
-    res = df_phot(target=target, ref=ref, df=df_g, normed=normed, showfig=True)
+    res = df_phot(target=target, ref=ref, df=df_g, bin=binning, normed=normed, showfig=True)
 elif band == 'r':
-    res = df_phot(target=target, ref=ref, df=df_r, normed=normed, showfig=True)
+    res = df_phot(target=target, ref=ref, df=df_r, bin=binning, normed=normed, showfig=True)
 elif band == 'z':
-    res = df_phot(target=target, ref=ref, df=df_z, normed=normed, showfig=True)
+    res = df_phot(target=target, ref=ref, df=df_z, bin=binning, normed=normed, showfig=True)
 elif band== 'all':
     if show_raw_lc == True:
         '''
@@ -132,14 +96,16 @@ elif band== 'all':
     print('-----------------------\n')
 
     df_grz = df_phot_multicolor(target, ref, df_g, df_r, df_z, normed, showfig=True)
-    #df_grz.to_csv('grz_band.csv', mode = 'w', header =df_grz.columns)
+
+    #plot lightcurve separately
     #res1, res2, res3 = df_phot_multicolor2(target, ref, df_g, df_r, df_z, star, normed)
-    '''print('-----------------------')
-    print('Generating scatter matrix')
-    print('-----------------------\n')
-    plot_matrix(df_z)'''
-    #plot specific parameters
-    #plot_params(df_z)
+
+    # print('-----------------------')
+    # print('Generating scatter matrix')
+    # print('-----------------------\n')
+    # plot_matrix(df_z)
+    # #plot specific parameters
+    # plot_params(df_z)
 
 else:
     print('ERROR: check missing data in {}'.format(output_dir))

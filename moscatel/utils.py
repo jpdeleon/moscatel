@@ -53,7 +53,7 @@ def init_moscatel(filedir, skip_every=None):
 
     return bands
 
-def combine_df(output_dir):
+def combine_df(output_dir, clip):
     df_r = pd.read_csv(output_dir+'/rband.csv', index_col=0, parse_dates=True)
     df_g = pd.read_csv(output_dir+'/gband.csv', index_col=0, parse_dates=True)
     df_z = pd.read_csv(output_dir+'/zband.csv', index_col=0, parse_dates=True)
@@ -64,7 +64,55 @@ def combine_df(output_dir):
     #read
     df_grz = pd.read_csv(output_dir+'/grzband.csv', index_col=0, parse_dates=True)
     #df.index.to_julian_date()
+    if clip is not None:
+        try:
+            '''
+            uneven clipping happens because len of each dataset is different;
+            e.g., g-band becomes shorter than r-band lc
+            '''
+            df_g = df_g.iloc[clip[0]:-clip[1]]
+            df_r = df_r.iloc[clip[0]:-clip[1]]
+            df_z = df_z.iloc[clip[0]:-clip[1]]
+            df_grz = df_grz.iloc[clip[0]:-clip[1]]
+        except:
+            print('ERROR: cannot clip: {0},{1}'.format(clip[0], clip[1]))
     return df_r, df_g, df_z, df_grz
+
+def load_df(output_dir, band, clip):
+    try:
+        fname='{}band.csv'.format(band)
+        df = pd.read_csv(os.path.join(output_dir,fname), index_col=0, parse_dates=True)
+        if clip is not None:
+            df = df.iloc[clip[0]:-clip[1]]
+    except:
+        print('\NOTE: check missing {0}-band data in {1}'.format(band, output_dir))
+
+    return df
+
+def clip_outlier(clip_sigma, t, r, df_g, df_r, df_z, df_grz):
+    '''
+    bug: number of outliers (in target,ref cols) not correctly counted
+    e.g. try: n_g = df_g['g_'+t+'_flux'][...]
+    '''
+    print('\n-----------------------')
+    print('Removing outliers outside +/-sigma={} in each band...'.format(clip_sigma))
+    print('-----------------------')
+    df_g = df_g[np.abs(df_g-df_g.mean())<=(clip_sigma*df_g.std())]
+    n_g = df_g[~(np.abs(df_g-df_g.mean())<=(clip_sigma*df_g.std()))]
+    print('removed {} outliers in g-band'.format(len(n_g)))
+    df_r = df_r[np.abs(df_r-df_r.mean())<=(clip_sigma*df_r.std())]
+    n_r = df_r[~(np.abs(df_r-df_r.mean())<=(clip_sigma*df_r.std()))]
+    print('removed {} outliers in r-band'.format(len(n_r)))
+    n_z = df_z[~(np.abs(df_z-df_z.mean())<=(clip_sigma*df_z.std()))]
+    df_z = df_z[np.abs(df_z-df_z.mean())<=(clip_sigma*df_z.std())]
+    print('removed {} outliers in z-band'.format(len(n_z)))
+    #check if grz
+    try:
+        df_grz = df_grz[np.abs(df_grz-df_grz.mean())<=(clip_sigma*df_grz.std())]
+    except:
+        pass
+
+    return df_g, df_r, df_z, df_grz
 # def df_phot_multicolor2(target, ref, df_grz, star, normed, showfig=None):
 #     if target=='a':
 #         t=df_grz.columns[[0,10,18]]
@@ -129,3 +177,8 @@ def remove_outlier(df_g, df_r, df_z):
     #check if grz
     #df_grz = df_grz[np.abs(df_grz-df_grz.mean())<=(clip_sigma*df_grz.std())]
     return df_g, df_r, df_z
+
+def get_star_centroids():
+    #stack a few images
+    #get sources
+    return
