@@ -3,116 +3,96 @@
 import os
 from glob import glob
 import argparse
-from tqdm import tqdm
-import numpy as np
+import getpass
 import sys
+import ast
+
+from moscatel.utils import *
+from moscatel.phot import * #make_lightcurve
+from moscatel.plot import *
 
 try:
     from astropy.io import fits as pf
 except:
     import pyfits as pf
-
-from moscatel.plot import *
-import pandas as pd
+import numpy as np
 from matplotlib import pyplot as plt
-
-from moscatel.utils import *
-from moscatel.phot import make_lightcurve
-import getpass
-import os
-
+import pandas as pd
+from tqdm import tqdm
 #import multiprocessing
 
-#config=np.loadtxt('config.dat', dtype=str)
-#raw_img_dir=config[1].split('=')[1].strip("'")
-
-#raw_img_dir = '/mnt/sda1/data/df_HATP44/HATP44_data'
-username = getpass.getuser()
-raw_img_dir = os.path.join('/home',username,'data/hatp44_data')
-output_dir = os.path.join('/home',username,'moscatel_output')
-
-#centroids = args.centroids
-centroids = [(703, 303), (915, 264), (707, 758)]
 
 parser = argparse.ArgumentParser(description=
-	"Basic pipeline:\n1. Given raw data directory location in config.dat, get list of frames by filter based on header\n2. Given `box_size`, crop 3 brightest point sources (default) per raw image frame \n3. Recalculate centroid of the cropped image\n4. Do photometry given aperture radius `r`\n5. Plot lightcurves", usage='use "%(prog)s --help" for more information', formatter_class=argparse.RawTextHelpFormatter)
+	"""Basic pipeline:\n
+    1. Reads photometry configuration defined in config.txt
+    2. Given `box_size`, crop 3 (default) brightest point sources
+    per raw image frame
+    3. Recalculate centroid of the cropped image
+    4. Do photometry given aperture radius `r`
+    5. Plot lightcurves""",
+    usage='use "%(prog)s --help" for more information',
+    formatter_class=argparse.RawTextHelpFormatter)
 
-parser.add_argument('--band_idx', help='0: g-band, 1: r-band, 2: z-band', type=int, choices=(0,1,2))
-parser.add_argument('--skip_every', help='skip every nth frame per band e.g. 5', type=int, default=None)
+parser.add_argument('--band_idx', help='0: g-band, 1: r-band, 2: z-band, (3: i-band)', type=int, choices=(0,1,2), required=True)
 parser.add_argument('--box_size', help='size of crop box (in pixels) centered on point source; default=80 pix', type=int, default=100)
-#parser.add_argument('--num_stars', help='number of bright stars to retrieve lightcurve; default=3', type=int, default=3)
-parser.add_argument('--r',help='size (in pixels) of aperture radius for photometry', type=int, default=20)
+parser.add_argument('--r',help='size (in pixels) of aperture radius for photometry', type=int)
 parser.add_argument('--showfig', help='show raw lightcurve after aperture photometry?', type=bool, default=False)
-#parser.add_argument('--data_path', help='location of data', type=str, required=True)
-#parser.add_argument('--centroids', help'', type=int)
 args = parser.parse_args()
 
 band_idx = args.band_idx
-skip_every = args.skip_every
 box_size = args.box_size
-aperture_radius = args.r
-#num_stars=args.num_stars
 showfig = args.showfig
 
-#check_list = args.check_list
-#data_path = args.data_path
-
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-
-else:
-    pass
-
-#initialize
-print('-----------------------')
-print('Checking raw data frames')
+print('\n-----------------------')
+print('Retrieving output of moscatel-init')
 print('-----------------------\n')
+config=check_config()
+data_dir = config[0]
+input_dir = config[1]
+filters_in_config = config[2].split(',')
+centroids = config[3]
+if args.r is not None:
+    aperture_radius = args.r
+else:
+    aperture_radius = config[4]
+    #convert string to int or tuple
+    #aperture_radius = ast.literal_eval(aperture_radius)
 
-bands = init_moscatel(raw_img_dir, skip_every)
-'''if check_list == True or check_list == None:
-    #run this first time; make False when running when running again for other two bands
+input_files = glob(os.path.join(input_dir,'*.txt'))
 
-    #check if file exists
-    if os.path.isfile(output_dir+'filter_paths.txt'):
-        print('File header already read and saved. Try --check_list False')
-
-    bands = init_moscatel(raw_img_dir, skip_every)
-    np.savetxt(output_dir+'/band1_paths.txt',bands[0],fmt='%s')
-    np.savetxt(output_dir+'/band2_paths.txt',bands[1],fmt='%s')
-    np.savetxt(output_dir+'/band3_paths.txt',bands[2],fmt='%s')
-
-else: #check_list == False
-    if os.path.isfile(output_dir+'/band1_paths.txt'):
-        band1=np.loadtxt(output_dir+'/band1_paths.txt')
-        band2=np.loadtxt(output_dir+'/band2_paths.txt')
-        band3=np.loadtxt(output_dir+'/band3_paths.txt')
-        bands=[band1,band2,band3]'''
-
-##loop in 3 stars given band
+bands={}
+if input_files != []:
+    for i in input_files:
+        b=i.split('/')[-1].split('-')[0]
+        bands[b]=np.loadtxt(i,dtype=str)
+else:
+    print('ERROR: no input files in {}\n'.format(input_dir))
+    print('Have you run `moscatel-init`?\n')
+    sys.exit()
 
 print('\n-----------------------')
 print('Generating lightcurves')
 print('-----------------------\n')
 
-if aperture_radius is not None:
-    print('\nUsing aperture radius: {} pixels\n'.format(aperture_radius))
+if aperture_radius !=config[4]: #if not default value in config.txt
+    print('\nUsing aperture radii: {} pixels\n'.format(aperture_radius))
 else:
     print('\nUsing default aperture radius: {} pixels\n'.format(aperture_radius))
 
-dfs, band_idx =  make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius)
+#consider only one aperture
+if type(aperture_radius) is not tuple:
+    for i in aperture_radius:
+        dfs, band_idx, band_names =  make_lightcurve(centroids, bands, band_idx,
+                                        box_size, aperture_radius)
+        df = plot_lightcurve(dfs, band_idx, band_names, aperture_radius)
 
-#plot fluxes
-df = plot_lightcurve(dfs, band_idx)
-# print('Plotting raw lightcurve ...\n')
-# star=input('choose which star to plot: (0: brightest; {}:faintest; all: all lightcurves)'.format(num_ref))
-# df = plot_lightcurve(dfs, band_idx, star)
+#do photometry per aperture radius
+else:
+    dfs, band_idx, band_names =  make_lightcurve2(centroids, bands, band_idx,
+                                    box_size, aperture_radius)
+    df = plot_lightcurve2(dfs, band_idx, band_names, i)
 
-#save dataframe as csv
-filename=output_dir+'/{0}band.csv'.format(df.columns[0].split('_')[0])
-if os.path.isfile(filename):
-    print('\nOverwriting {}'.format(filename))
 
-df.to_csv(filename, mode = 'w', header =df.columns)
 print('\n-----------------------')
 print('Data saved in {}'.format(filename))
 print('-----------------------\n')
