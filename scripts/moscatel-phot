@@ -12,18 +12,24 @@ try:
 except:
     import pyfits as pf
 
+from moscatel.plot import *
 import pandas as pd
 from matplotlib import pyplot as plt
 
 from moscatel.utils import *
 from moscatel.phot import make_lightcurve
+import getpass
+import os
+
 #import multiprocessing
 
 #config=np.loadtxt('config.dat', dtype=str)
 #raw_img_dir=config[1].split('=')[1].strip("'")
 
-raw_img_dir = '/mnt/sda1/data/df_HATP44/HATP44_data'
-output_dir = '/home/Jerome/moscatel_output'
+#raw_img_dir = '/mnt/sda1/data/df_HATP44/HATP44_data'
+username = getpass.getuser()
+raw_img_dir = os.path.join('/home',username,'data/hatp44_data')
+output_dir = os.path.join('/home',username,'moscatel_output')
 
 #centroids = args.centroids
 centroids = [(703, 303), (915, 264), (707, 758)]
@@ -34,6 +40,7 @@ parser = argparse.ArgumentParser(description=
 parser.add_argument('--band_idx', help='0: g-band, 1: r-band, 2: z-band', type=int, choices=(0,1,2))
 parser.add_argument('--skip_every', help='skip every nth frame per band e.g. 5', type=int, default=None)
 parser.add_argument('--box_size', help='size of crop box (in pixels) centered on point source; default=80 pix', type=int, default=100)
+#parser.add_argument('--num_stars', help='number of bright stars to retrieve lightcurve; default=3', type=int, default=3)
 parser.add_argument('--r',help='size (in pixels) of aperture radius for photometry', type=int, default=20)
 parser.add_argument('--showfig', help='show raw lightcurve after aperture photometry?', type=bool, default=False)
 #parser.add_argument('--data_path', help='location of data', type=str, required=True)
@@ -44,6 +51,7 @@ band_idx = args.band_idx
 skip_every = args.skip_every
 box_size = args.box_size
 aperture_radius = args.r
+#num_stars=args.num_stars
 showfig = args.showfig
 
 #check_list = args.check_list
@@ -95,6 +103,9 @@ dfs, band_idx =  make_lightcurve(centroids, bands, band_idx, box_size, aperture_
 
 #plot fluxes
 df = plot_lightcurve(dfs, band_idx)
+# print('Plotting raw lightcurve ...\n')
+# star=input('choose which star to plot: (0: brightest; {}:faintest; all: all lightcurves)'.format(num_ref))
+# df = plot_lightcurve(dfs, band_idx, star)
 
 #save dataframe as csv
 filename=output_dir+'/{0}band.csv'.format(df.columns[0].split('_')[0])

@@ -50,6 +50,5 @@ setup(
         'Topic :: Scientific/Engineering',
         'Programming Language :: Python'
         ],
-#    install_requires = ['numpy', 'pandas', 'matplotlib', 'astropy', 'photutils', 'tqdm', 'glob'],
-    install_requires = ['numpy', 'pandas', 'matplotlib', 'astropy', 'photutils', 'tqdm'],
+    install_requires = ['numpy', 'pandas', 'matplotlib', 'astropy', 'photutils', 'tqdm', 'scikit-image'],
 )
