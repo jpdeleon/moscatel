@@ -41,7 +41,7 @@ setup(
     long_description=rd("README.md") + "\n\n"
                     + "---------\n\n",
     package_dir={"moscatel": "moscatel"},
-    scripts=['scripts/moscatel-phot', 'scripts/moscatel-analysis'],
+    scripts=['scripts/moscatel-phot', 'scripts/moscatel-analysis', 'scripts/moscatel-init'],
     include_package_data=True,
     keywords=['muscat','multi-color','transit photometry'],
     classifiers = [
