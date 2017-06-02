@@ -1,21 +1,37 @@
 #!/usr/bin/env python
 
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-
 import os
 from glob import glob
 from tqdm import tqdm
-
+import pandas as pd
+import getpass
+import ast
 try:
     from astropy.io import fits as pf
 except:
     import pyfits as pf
 
-def init_moscatel(filedir, skip_every=None):
+def init_moscatel(filedir, filters_in_config, output_dir, skip_every=None):
+    """Checks the raw data and sorts them by band/color.
+
+        Parameters
+        ----------
+
+        filedir : str
+                path to raw data directory
+
+        skip_every : int
+                interval of raw data to skip for quick look;
+                e.g., skip_every=2 skips every 2nd raw data;
+                default is 1
+    """
     file_list = glob(os.path.join(filedir,'*.fits'))
     file_list.sort()
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     if os.listdir(filedir) != []:
     #if len(file_list)>0:
         print('total no. of raw data frames: {0}\n'.format(len(file_list)))
@@ -25,33 +41,90 @@ def init_moscatel(filedir, skip_every=None):
 
         else: #elif skip_every == None:
             '''
-            does not print even if skip_every is not entered in terminal
+            bug: does not print even if skip_every is not entered in terminal
             '''
             print('Analyzing all raw frames per band')
             skip_every=1
 
-        gband=[]
-        rband=[]
-        zband=[]
+        bands = {}
+        for j in filters_in_config:
+            j=j.strip(' ')
+            bands[j]=[]
+        filters_in_hdr=[]
 
         #get list of frames by filter based on header
         for i in tqdm(file_list[::skip_every]):
             hdr = pf.open(i)[0].header
-            if hdr['FILTER'] == 'g':
-                gband.append(i)
-            elif hdr['FILTER'] == 'r':
-                rband.append(i)
-            else: #hdr['FILTER'] == 'z_s':
-                zband.append(i)
+            filters_in_hdr.append(hdr['FILTER'])
+            for j in filters_in_config:
+                if hdr['FILTER'] == j:
+                    j=j.strip(' ')
+                    bands[j].append(i)
 
-        print('gband={0} frames\nrband={1} frames\nzband={2} frames'.format(len(gband), len(rband), len(zband)))
-        bands=(gband,rband,zband)
+        filters_in_hdr_set=list(set(filters_in_hdr)).sort()
+
+        for k in bands.keys():
+            print('{0}-band={1} frames'.format(k, len(bands[k])))
+            #save into txtfile
+            name = os.path.join(output_dir,k+'-band.txt')
+            with open(name, 'w') as z: #overwrite
+                #write line by line
+                for line in bands[k]:
+                    z.write('{}\n'.format(line))
+        print('\nfilenames sorted by band saved in {}'.format(output_dir))
 
     else:
         print('ERROR: check your data directory')
-        bands=''
+        #return empty dict
+        bands={}
 
-    return bands
+    return filters_in_hdr_set
+
+def create_config(config_dir):
+    '''
+    Called in moscatel-init to create
+    a default configuration file (if does not exist)
+    '''
+    fname=os.path.join(config_dir,'config.txt')
+    with open(fname, 'w') as w: #overwrite
+        w.write('#moscatel configuration file\n')
+        w.write('#folders must be at home/user/\n')
+        w.write('#remove any whitespace\n')
+        w.write('#-------------------------------------------------------\n')
+        w.write('#initialize: moscatel-init\n')
+        w.write('data_dir=data/hatp44_data\n')
+        w.write('output_dir=output\n')
+        w.write('filters=g,r,z_s\n')
+        w.write('#-------------------------------------------------------\n')
+        w.write('#photometry settings: moscatel-phot\n')
+        w.write('centroids=(703, 303),(915, 264),(707, 758)\n')
+        w.write('aperture_radius=20\n')
+        w.write('#-------------------------------------------------------\n')
+        w.write('#lightcurve analysis settings: moscatel-analysis\n')
+    print('config.txt created in {}'.format(config_dir))
+
+def check_config():
+    home_dir=os.path.join('/home',getpass.getuser(),'moscatel')
+    config=np.genfromtxt(os.path.join(home_dir,'config.txt'),dtype=str, \
+                        delimiter='=', comments='#')
+    for i in config:
+        if i[0] == 'data_dir':
+            data_dir = os.path.join('/home',getpass.getuser(),i[-1].strip(' '))
+        elif i[0] == 'output_dir':
+            output_dir = os.path.join(data_dir,i[-1].strip(' '))
+        elif i[0] == 'filters':
+            filters = i[-1].strip(' ')
+        elif i[0] == 'centroids':
+            #convert txt to tuple
+            centroids = ast.literal_eval(i[-1])
+        elif i[0] == 'aperture_radius':
+            aper_radius = i[-1]
+            aper_radius = ast.literal_eval(aper_radius)
+        else:
+            print('config file not read correctly')
+            data_dir, output_dir, filters, centroids, aper_radius = [],[],[],[],[]
+    return data_dir, output_dir, filters, centroids, aper_radius
+
 
 def combine_df(output_dir, clip):
     df_r = pd.read_csv(output_dir+'/rband.csv', index_col=0, parse_dates=True)
@@ -80,12 +153,12 @@ def combine_df(output_dir, clip):
 
 def load_df(output_dir, band, clip):
     try:
-        fname='{}band.csv'.format(band)
+        fname='{}-band_phot.csv'.format(band)
         df = pd.read_csv(os.path.join(output_dir,fname), index_col=0, parse_dates=True)
         if clip is not None:
             df = df.iloc[clip[0]:-clip[1]]
     except:
-        print('\NOTE: check missing {0}-band data in {1}'.format(band, output_dir))
+        print('\nNOTE: check missing {0}-band data in {1}'.format(band, output_dir))
 
     return df
 
@@ -182,3 +255,18 @@ def get_star_centroids():
     #stack a few images
     #get sources
     return
+
+def save_df(input_dir,df,band_names,band_idx):
+    #save dataframe as csv
+    filename=os.path.join(input_dir,
+    '{0}-band_phot.csv'.format(band_names[band_idx]))
+
+    if os.path.isfile(filename):
+        print('\nOverwriting {}'.format(filename))
+
+
+    df.to_csv(filename, mode = 'w', header =df.columns)
+
+    print('\n-----------------------')
+    print('Data saved in {}'.format(filename))
+    print('-----------------------\n')

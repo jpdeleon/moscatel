@@ -5,26 +5,23 @@ from datetime import datetime as dt
 import matplotlib.dates as dates
 import numpy as np
 from pandas.tools.plotting import scatter_matrix
+from moscatel.utils import *
 
-def plot_lightcurve(dfs, band_idx, showfig=None):
+def plot_lightcurve(dfs, band_idx, band_names, aper_radius, showfig=None):
     df = pd.concat(dfs, axis=1)
     #df.head()
-
-    if band_idx==0:
-        cols = 'g_a_flux g_b_flux g_c_flux'.split()
-
-    elif band_idx==1:
-        cols = 'r_a_flux r_b_flux r_c_flux'.split()
-
-    else:
-        cols = 'z_a_flux z_b_flux z_c_flux'.split()
+    config=check_config()
+    centroids = config[3]
+    cols = []
+    for i in range(len(centroids)):
+        cols.append('{0}_{1}_flux_r{2}'.format(band_names[band_idx], i,aper_radius))
 
     if showfig==None or showfig==True:
         '''
         bug: title shows as band_idx instead of g,r,z
         '''
         axx = df[cols].plot(subplots=True, alpha=0.8, figsize=(15,8))
-        plt.suptitle('Raw flux in {}-band'.format(band_idx))
+        plt.suptitle('Raw flux of {}-band'.format(band_names[band_idx]))
         #axx.set_ylabel('Raw Flux')
         #axx.set_xlabel('Time (HJD)')
 
@@ -75,21 +72,15 @@ def plot_details(target, ref, df, normed=True):
     ax[2].set_ylabel('FWHM [pix]')
     ax[3].set_ylabel('Airmass')
     plt.show()
-    
-def plot_multicolor(df, star_idx, showfig=None):
+
+def plot_multicolor(df_g, df_r, df_z, r, star_idx, showfig=None):
     '''
     plotted when 'show_raw_lc == True' in moscatel-analysis
     '''
+    target_col='{0}_{1}_flux_r{2}'.format(band, target, r)
+    ref_col='{0}_{1}_flux_r{2}'.format(band, ref, r)
 
-    if star_idx==0:
-        cols = 'g_a_flux g_b_flux g_c_flux'.split()
-
-    elif star_idx==1:
-        cols = 'r_a_flux r_b_flux r_c_flux'.split()
-
-    else:
-        cols = 'z_a_flux z_b_flux z_c_flux'.split()
-
+    
     if showfig is not None and showfig == True:#showfig==None or showfig==True:
         #normalize
         df = df/df.median()
@@ -102,27 +93,16 @@ def plot_multicolor(df, star_idx, showfig=None):
     return df
 
 
-def df_phot(target, ref, df, bin, normed=True, showfig=None):
+def df_phot(target, ref, df, band, r, bin, normed=True, showfig=None):
     '''
     small bug:
     revise structure of df: arbitrary number of ref stars
     '''
-    if target=='a':
-        t=df.columns[0]
-    elif target=='b':
-        t=df.columns[3]
-    else:
-        t=df.columns[6]
-
-    if ref=='a':
-        r=df.columns[0]
-    elif ref=='b':
-        r=df.columns[3]
-    else:
-        r=df.columns[6]
+    target_col='{0}_{1}_flux_r{2}'.format(band, target, r)
+    ref_col='{0}_{1}_flux_r{2}'.format(band, ref, r)
 
     #differential photometry
-    res=(df[t]/df[r])
+    res= df[target_col] / df[ref_col]
 
     #normalization
     if normed == True:
@@ -135,7 +115,7 @@ def df_phot(target, ref, df, bin, normed=True, showfig=None):
         ax2.plot(df.index, res, 'ko', linestyle='none', alpha=0.1)
         #plot binned data
         binned=res.resample(str(bin)+'T').mean().plot(ax=ax2, marker='o', linestyle='none')
-        ax2.set_title('{0}-band of {1}/{2}'.format(df.columns[0].split('_')[0],
+        ax2.set_title('target={1}, ref={2} ({0}-band)'.format(df.columns[0].split('_')[0],
         target,ref))
         # ax2 = res.plot(figsize=(15,5), color='k', marker='o', linestyle='none', title='{}-band'.format(df.columns[0].split('_')[0]))
         ax2.xaxis.set_major_formatter(dates.DateFormatter('%H:%m'))

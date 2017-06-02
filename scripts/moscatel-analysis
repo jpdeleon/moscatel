@@ -9,17 +9,48 @@ import getpass
 from moscatel.plot import df_phot, plot_matrix, plot_params, plot_multicolor, df_phot_multicolor, df_phot_multicolor2
 from moscatel import utils
 
-parser = argparse.ArgumentParser(description="Do differential photometry by dividing flux of target star by that of the ref star given the star ids (e.g. target=a,ref=b) and show lightcurve",usage='use "%(prog)s --help" for more information', formatter_class=argparse.RawTextHelpFormatter)
+config=utils.check_config()
+output_dir = config[1]
+filters = config[2]
+centroids = config[3]
 
-parser.add_argument('--target', help='target star id', type=str, choices=('a','b','c'))
-parser.add_argument('--ref', help='reference star id', type=str, choices=('a','b','c'))
-parser.add_argument('--band', help='choose band', type=str, default='all', choices=('g','r','z', 'all'))
+parser = argparse.ArgumentParser(description=
+    """Do differential photometry by dividing flux of target star by that of
+    the ref star given the star ids (e.g. target=a,ref=b) and show lightcurve""",
+    usage='use "%(prog)s --help" for more information',
+    formatter_class=argparse.RawTextHelpFormatter)
+
+parser.add_argument('--target',
+    help='target star id',
+    type=str)#,choices='{}'.format(range(len(centroids)))
+parser.add_argument('--ref',
+    help='reference star id',
+    type=str)#, choices='{}'.format(range(len(centroids)))
+parser.add_argument('--band',
+    help='choose band', type=str,
+    default='all',
+    choices='{}, all'.format(filters))
 #parser.add_argument('--star', help='choose star', type=int, default=None, choices=(0,1,2))
-parser.add_argument('--normed', help='normalize lightcurve?', type=bool, default=True, choices=(True, False))
-parser.add_argument('--show_raw_lc', help='show raw lightcurve?', type=bool, default=False, choices=(True, False))
-parser.add_argument('--clip', help='clip datapoints (leading,trailing)', type=str, default=None)
-parser.add_argument('--clip_sigma', help='keep only the ones that are within +- sigma', type=float, default=None)
-parser.add_argument('--binning', help='number of minutes per bin', type=int, default=5)
+parser.add_argument('--normed',
+    help='normalize lightcurve?',
+    type=bool, default=True,
+    choices=(True, False))
+parser.add_argument('--show_raw_lc',
+    help='show raw lightcurve?',
+    type=bool, default=False,
+    choices=(True, False))
+parser.add_argument('--clip',
+    help='clip datapoints (leading,trailing)',
+    type=str, default=None)
+parser.add_argument('--clip_sigma',
+    help='keep only the ones that are within +- sigma',
+    type=float, default=None)
+parser.add_argument('--binning',
+    help='number of minutes per bin',
+    type=int, default=5)
+parser.add_argument('--r',
+    help='aperture radius',
+    type=int, default=20)
 
 args = parser.parse_args()
 
@@ -32,35 +63,36 @@ show_raw_lc = args.show_raw_lc
 clip = args.clip
 clip_sigma=args.clip_sigma
 binning=args.binning
+r = args.r
 
 #parse tuple separated by comma
 if clip is not None:
     clip = [int(i) for i in clip.split(',')]
 
 ##load output of `moscatel` in output/*.csv
-username = getpass.getuser()
-output_dir = os.path.join('/home',username,'moscatel_output')
-
 
 if not os.path.exists(output_dir):
     print('\nERROR: check missing output file of `moscatel-phot` in : {}\n'.format(output_dir))
     sys.exit()
 
-if band=='r':
+if band=='r': #filters[0]
     df_r = utils.load_df(output_dir, band, clip)
 
 elif band =='g':
     df_g = utils.load_df(output_dir, band, clip)
 
 elif band=='z':
-    df_z = utils.load_df(output_dir, band, clip)
+    df_z = utils.load_df(output_dir, 'z_s', clip)
+
+elif band=='i': #for muscat2
+    df_i = utils.load_df(output_dir, band, clip)
 
 else: #band == 'all'
     print('Checking all bands...')
     try:
         df_r, df_g, df_z, df_grz = utils.combine_df(output_dir, clip)
     except:
-        print('\NOTE: check missing data in {}'.format(output_dir))
+        print('\nNOTE: check missing data in {}'.format(output_dir))
 
 if clip_sigma is not None:
     '''
@@ -74,11 +106,14 @@ print('Showing lightcurve')
 print('-----------------------\n')
 
 if band == 'g':
-    res = df_phot(target=target, ref=ref, df=df_g, bin=binning, normed=normed, showfig=True)
+    res = df_phot(target, ref, df_g, band, r, bin=binning, normed=normed, showfig=True)
 elif band == 'r':
-    res = df_phot(target=target, ref=ref, df=df_r, bin=binning, normed=normed, showfig=True)
+    res = df_phot(target, ref, df_r, band, r, bin=binning, normed=normed, showfig=True)
 elif band == 'z':
-    res = df_phot(target=target, ref=ref, df=df_z, bin=binning, normed=normed, showfig=True)
+    res = df_phot(target, ref, df_z, 'z_s', r, bin=binning, normed=normed, showfig=True)
+elif band == 'i':
+    res = df_phot(target, ref, df_i, band, r, bin=binning, normed=normed, showfig=True)
+
 elif band== 'all':
     if show_raw_lc == True:
         '''

@@ -12,10 +12,7 @@ except:
 from datetime import datetime as dt
 import matplotlib.pyplot as plt
 import pandas as pd
-
-dfs = []
-band_name = ['g','r','z']
-star_names = 'abc'
+from scipy.optimize import curve_fit
 
 def get_crop(image, centroid, box_size):
     x, y = centroid
@@ -29,12 +26,6 @@ def get_centroid(image):
     '''
     centroid = com(image)
     return centroid
-
-def get_fwhm():
-    # https://python4astronomers.github.io/fitting/sherpa.html
-    
-    return 0
-
 
 def get_phot(image, centroid, r):
     fwhm = 8.0
@@ -73,7 +64,7 @@ def radial_profile(image, center):
 def get_bkg(image, centroid, r_in=10., r_out=20.):
     annulus = CircularAnnulus(centroid, r_in, r_out)
     result = aperture_photometry(image, annulus)
-    bkg_mean = result['aperture_sum'] / annulus.area()
+    bkg_mean = float(result['aperture_sum'] / annulus.area())
     return bkg_mean
 
 def get_phot2(image, bkg_mean, centroid, r=10):
@@ -84,20 +75,42 @@ def get_phot2(image, bkg_mean, centroid, r=10):
 
     return aperture_sum #,centroid
 
+dfs = []
 def make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius):
-    for star_idx in range(3):
+    """Creates a lightcurve after doing aperture photometry
+
+        Parameters
+        ----------
+
+        centroids : typle
+                (x,y) centroid positions from config.txt
+
+        bands: dict
+                dictionary of filenames by band/color
+
+        band_idx: int
+                index for band/color
+
+        box_size: int
+                size of box for cropping (in pix)
+
+        aperture_radius: int
+                aperture radius for photometry (in pix)
+    """
+    band_names = np.sort(list(bands.keys()))
+    num_stars= range(len(centroids))
+    for star_idx in num_stars:
         xcenters, ycenters = [],[]
         aperture_sums = []
         background = []
+        fwhms = []
         obs_time = []
         obs_mjd = []
-        sum_per_band = {}
-
         ##extract lightcurve (enumerate all frames) in a given band
-        for i in tqdm(bands[band_idx]):
+        for i in tqdm(bands[band_names[band_idx]]):
+            #import pdb; pdb.set_trace()
             hdr = fits.open(i)[0].header
             img = fits.open(i)[0].data
-
             #get dates from fits header
             date=dt.strptime(hdr['DATE-OBS'], '%Y-%m-%d')
             time=dt.strptime(hdr['EXP-STRT'], '%H:%M:%S.%f')
@@ -106,12 +119,12 @@ def make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius):
             obs_mjd.append(hdr['MJD-STRT'])
 
             #crop
+            #import pdb; pdb.set_trace()
             image_crop = get_crop(img, centroids[star_idx], box_size)
 
             ###aperture photometry###
             #compute centroid
             centroid = get_centroid(image_crop)
-            centroids.append(centroid)
 
             xcenters.append(centroid[0])
             ycenters.append(centroid[1])
@@ -119,7 +132,11 @@ def make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius):
             #compute backgound
             bkg_mean=get_bkg(image_crop, centroid, r_in=20., r_out=30.)
 
+            #measure fwhm
+            fwhm=get_fwhm(image_crop)
+
             #without aperture photometry
+
             aperture_sum = get_phot(image_crop, centroid, r=aperture_radius)
 
             #minus background wihtin annulus
@@ -128,15 +145,58 @@ def make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius):
             aperture_sums.append(aperture_sum)
             background.append(bkg_mean)
 
-        #output as dataframe of given band and star
-        '''
-        fix column to add aperture radius: e.g.
-        '{0}_{1}_flux_r{2}'.format(band_name[band_idx], star_names[star_idx], aperture_radius) : aperture_sums},
-        '''
-        dfs.append(pd.DataFrame(
-            {'{0}_{1}_x'.format(band_name[band_idx], star_names[star_idx]) : xcenters,
-             '{0}_{1}_y'.format(band_name[band_idx], star_names[star_idx]) : ycenters,
-             '{0}_{1}_flux'.format(band_name[band_idx], star_names[star_idx]) : aperture_sums},
-            index = obs_time))
+            # if fwhm < 10*np.median(fwhms):
+            #     fwhms.append(fwhm)
+            # else:
+            #     fwhms.append(np.nan)
+            fwhms.append(fwhm)
 
-    return dfs, band_idx
+        #output as dataframe of given band and star
+
+        dfs.append(pd.DataFrame(
+            {'{0}_{1}_x'.format(band_names[band_idx], str(star_idx)) : xcenters,
+             '{0}_{1}_y'.format(band_names[band_idx], str(star_idx)) : ycenters,
+             '{0}_{1}_flux_r{2}'.format(band_names[band_idx], str(star_idx), aperture_radius) : aperture_sums,
+             '{0}_{1}_bkg_r{2}'.format(band_names[band_idx], str(star_idx), aperture_radius) : background,
+             '{0}_{1}_fwhm_r{2}'.format(band_names[band_idx], str(star_idx), aperture_radius) : fwhms},
+             #'airmass' : airmass
+            index = obs_time))
+    return dfs, band_idx, band_names
+
+def get_fwhm(image_crop):
+    # https://python4astronomers.github.io/fitting/sherpa.html
+    i,j = np.unravel_index(image_crop.argmax(), image_crop.shape) #take x,y max
+    #plt.plot(image_crop[i,:], '-')
+    #plt.plot(image_crop[:,j], '--')
+    peak_x=image_crop[i,:]
+    peak_y=image_crop[:,j]
+    try:
+        sigma=model_gaussian(peak_x, peak_y)
+        fwhm=2.355*np.abs(sigma)
+    except:
+        #no good estimate
+        fwhm=np.nan
+
+    return fwhm
+
+def gauss(x, *params):
+    A, mu, sigma, eps= params
+    return A*np.exp(-(x-mu)**2/(2.*sigma**2)) + eps
+
+def model_gaussian(peak_x, peak_y,verbose=False):
+    #estimate mean and standard deviation
+    ydata = (peak_x+peak_y)/2.0
+    xdata = np.array(range(len(ydata)))
+    mean = np.mean(ydata)
+    sigma = np.std(ydata)
+    amp = np.max(ydata)
+    eps =0.1
+    #fitting
+    popt, pcov = curve_fit(gauss, xdata, ydata, p0 = [amp, mean, sigma, eps])
+
+    #plt.plot(xdata,gauss(xdata, *popt), label='Gaussian fit')
+    #plt.plot(xdata,ydata,'ok', label='data')
+    #plt.legend()
+    if verbose==True:
+        print('A: {}\nmu: {}\nsigma= {}\neps: {}'.format(popt[0],popt[1], popt[2], popt[3]))
+    return popt[2]
