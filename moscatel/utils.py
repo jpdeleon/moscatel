@@ -81,6 +81,10 @@ def init_moscatel(filedir, filters_in_config, output_dir, skip_every=None):
     return filters_in_hdr_set
 
 def create_config(config_dir):
+    '''
+    Called in moscatel-init to create
+    a default configuration file (if does not exist)
+    '''
     fname=os.path.join(config_dir,'config.txt')
     with open(fname, 'w') as w: #overwrite
         w.write('#moscatel configuration file\n')
@@ -101,21 +105,24 @@ def create_config(config_dir):
 
 def check_config():
     home_dir=os.path.join('/home',getpass.getuser(),'moscatel')
-    config=np.loadtxt(os.path.join(home_dir,'config.txt'),dtype=str,
+    config=np.genfromtxt(os.path.join(home_dir,'config.txt'),dtype=str, \
                         delimiter='=', comments='#')
     for i in config:
-        if i[0].strip(' ') == 'data_dir':
+        if i[0] == 'data_dir':
             data_dir = os.path.join('/home',getpass.getuser(),i[-1].strip(' '))
-        elif i[0].strip(' ') == 'output_dir':
+        elif i[0] == 'output_dir':
             output_dir = os.path.join(data_dir,i[-1].strip(' '))
-        elif i[0].strip(' ') == 'filters':
+        elif i[0] == 'filters':
             filters = i[-1].strip(' ')
-        elif i[0].strip(' ') == 'centroids':
+        elif i[0] == 'centroids':
             #convert txt to tuple
             centroids = ast.literal_eval(i[-1])
-        elif i[0].strip(' ') == 'aperture_radius':
+        elif i[0] == 'aperture_radius':
             aper_radius = i[-1]
             aper_radius = ast.literal_eval(aper_radius)
+        else:
+            print('config file not read correctly')
+            data_dir, output_dir, filters, centroids, aper_radius = [],[],[],[],[]
     return data_dir, output_dir, filters, centroids, aper_radius
 
 
@@ -151,7 +158,7 @@ def load_df(output_dir, band, clip):
         if clip is not None:
             df = df.iloc[clip[0]:-clip[1]]
     except:
-        print('\NOTE: check missing {0}-band data in {1}'.format(band, output_dir))
+        print('\nNOTE: check missing {0}-band data in {1}'.format(band, output_dir))
 
     return df
 
@@ -249,11 +256,17 @@ def get_star_centroids():
     #get sources
     return
 
-def save_df():
+def save_df(input_dir,df,band_names,band_idx, aperture_radius):
     #save dataframe as csv
-    filename=os.path.join(input_dir,'{0}-band_phot.csv'.format(band_names[band_idx]))
+    filename=os.path.join(input_dir,
+    '{0}-band_phot_r{1}.csv'.format(band_names[band_idx], aperture_radius))
+
     if os.path.isfile(filename):
         print('\nOverwriting {}'.format(filename))
 
 
     df.to_csv(filename, mode = 'w', header =df.columns)
+
+    print('\n-----------------------')
+    print('Data saved in {}'.format(filename))
+    print('-----------------------\n')

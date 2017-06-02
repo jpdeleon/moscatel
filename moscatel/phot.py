@@ -97,7 +97,7 @@ def make_lightcurve(centroids, bands, band_idx, box_size, aperture_radius):
         aperture_radius: int
                 aperture radius for photometry (in pix)
     """
-    band_names = np.sort(bands.keys())
+    band_names = np.sort(list(bands.keys()))
     num_stars= range(len(centroids))
     for star_idx in num_stars:
         xcenters, ycenters = [],[]

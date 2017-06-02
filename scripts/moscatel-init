@@ -35,32 +35,16 @@ data_dir = config[0]
 output_dir = config[1]
 filters_in_config = config[2].split(',')
 
-filters_in_hdr = init_moscatel(data_dir, filters_in_config, output_dir, skip_every)
+try:
+    filters_in_hdr = init_moscatel(data_dir, filters_in_config, output_dir, skip_every)
+except:
+    print("Is raw data in 'data/'?\n Consider editing the config.txt in ~/moscatel/")
+
 if filters_in_config.sort() != filters_in_hdr:
     print('The filters specified in config file:\n{0}\n \
             does not match the filters in header of the raw data: \
             \n{1}'.format(filters_in_config, filters_in_hdr))
     sys.exit()
-
-'''if check_list == True or check_list == None:
-    #run this first time; make False when running when running again for
-    other two bands
-
-    #check if file exists
-    if os.path.isfile(output_dir+'filter_paths.txt'):
-        print('File header already read and saved. Try --check_list False')
-
-    bands = init_moscatel(raw_img_dir, skip_every)
-    np.savetxt(output_dir+'/band1_paths.txt',bands[0],fmt='%s')
-    np.savetxt(output_dir+'/band2_paths.txt',bands[1],fmt='%s')
-    np.savetxt(output_dir+'/band3_paths.txt',bands[2],fmt='%s')
-
-else: #check_list == False
-    if os.path.isfile(output_dir+'/band1_paths.txt'):
-        band1=np.loadtxt(output_dir+'/band1_paths.txt')
-        band2=np.loadtxt(output_dir+'/band2_paths.txt')
-        band3=np.loadtxt(output_dir+'/band3_paths.txt')
-        bands=[band1,band2,band3]'''
 
 print('-----------------------')
 print('          DONE')
