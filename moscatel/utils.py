@@ -256,10 +256,10 @@ def get_star_centroids():
     #get sources
     return
 
-def save_df(input_dir,df,band_names,band_idx, aperture_radius):
+def save_df(input_dir,df,band_names,band_idx):
     #save dataframe as csv
     filename=os.path.join(input_dir,
-    '{0}-band_phot_r{1}.csv'.format(band_names[band_idx], aperture_radius))
+    '{0}-band_phot.csv'.format(band_names[band_idx]))
 
     if os.path.isfile(filename):
         print('\nOverwriting {}'.format(filename))

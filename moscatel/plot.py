@@ -39,39 +39,6 @@ def plot_lightcurve(dfs, band_idx, band_names, aper_radius, showfig=None):
     plt.show()
     return df
 
-def plot_lightcurve2(dfs, band_idx, band_names, aper_radius, showfig=None):
-    for i in dfs.keys():
-        df = pd.concat(dfs[i], axis=1)
-        #df.head()
-        config=check_config()
-        centroids = config[3]
-        cols = []
-        for i in range(len(centroids)):
-            cols.append('{0}_{1}_flux_r{2}'.format(band_names[band_idx], i,aper_radius))
-
-            if showfig==None or showfig==True:
-                '''
-                bug: title shows as band_idx instead of g,r,z
-                '''
-                axx = df[cols].plot(subplots=True, alpha=0.8, figsize=(15,8))
-                plt.suptitle('Raw flux of {}-band'.format(band_names[band_idx]))
-                #axx.set_ylabel('Raw Flux')
-                #axx.set_xlabel('Time (HJD)')
-
-                # fig, ax = plt.subplots(nrows=4, ncols=1, figsize=(10,8), sharex=True)
-                # y= df['z_b_flux'] / df['z_a_flux']
-                # ax[0].plot(df.index,y, color='k', marker='o', linestyle='none', alpha=0.1)
-                # ax[0].plot(df.index,y, color='k', marker='o', linestyle='none', alpha=0.1)
-                # ax[0].set_ylabel('Flux ratio')
-                # ax[1].plot(df.index, df['z_a_x']-df['z_a_x'][0])
-                # ax[1].plot(df.index, df['z_a_y']-df['z_a_y'][0])
-                # ax[1].set_ylabel(r'$\Delta x [pix]''$\n$'r'\Delta y$ [pix]')
-                # plt.suptitle('HAT-P-44/ r-band')
-                # ax[2].set_ylabel('FWHM [pix]')
-                # ax[3].set_ylabel('Airmass')
-            plt.show()
-    return df
-
 def plot_details(target, ref, df, normed=True):
     if target=='a':
         t=df.columns[0]
@@ -106,20 +73,14 @@ def plot_details(target, ref, df, normed=True):
     ax[3].set_ylabel('Airmass')
     plt.show()
 
-def plot_multicolor(df, star_idx, showfig=None):
+def plot_multicolor(df_g, df_r, df_z, r, star_idx, showfig=None):
     '''
     plotted when 'show_raw_lc == True' in moscatel-analysis
     '''
+    target_col='{0}_{1}_flux_r{2}'.format(band, target, r)
+    ref_col='{0}_{1}_flux_r{2}'.format(band, ref, r)
 
-    if star_idx==0:
-        cols = 'g_a_flux g_b_flux g_c_flux'.split()
-
-    elif star_idx==1:
-        cols = 'r_a_flux r_b_flux r_c_flux'.split()
-
-    else:
-        cols = 'z_a_flux z_b_flux z_c_flux'.split()
-
+    
     if showfig is not None and showfig == True:#showfig==None or showfig==True:
         #normalize
         df = df/df.median()
@@ -132,28 +93,16 @@ def plot_multicolor(df, star_idx, showfig=None):
     return df
 
 
-def df_phot(target, ref, df, bin, normed=True, showfig=None):
+def df_phot(target, ref, df, band, r, bin, normed=True, showfig=None):
     '''
     small bug:
     revise structure of df: arbitrary number of ref stars
     '''
-    if target=='0':
-        colname='{0}_{1}_flux_r{2}'.format(band_names[band_idx], str(star_idx), aperture_radius)
-        t=df.columns[0]
-    elif target=='1':
-        t=df.columns[3]
-    else:
-        t=df.columns[6]
-
-    if ref=='a':
-        r=df.columns[0]
-    elif ref=='b':
-        r=df.columns[3]
-    else:
-        r=df.columns[6]
+    target_col='{0}_{1}_flux_r{2}'.format(band, target, r)
+    ref_col='{0}_{1}_flux_r{2}'.format(band, ref, r)
 
     #differential photometry
-    res=(df[t]/df[r])
+    res= df[target_col] / df[ref_col]
 
     #normalization
     if normed == True:
@@ -166,7 +115,7 @@ def df_phot(target, ref, df, bin, normed=True, showfig=None):
         ax2.plot(df.index, res, 'ko', linestyle='none', alpha=0.1)
         #plot binned data
         binned=res.resample(str(bin)+'T').mean().plot(ax=ax2, marker='o', linestyle='none')
-        ax2.set_title('{0}-band of {1}/{2}'.format(df.columns[0].split('_')[0],
+        ax2.set_title('target={1}, ref={2} ({0}-band)'.format(df.columns[0].split('_')[0],
         target,ref))
         # ax2 = res.plot(figsize=(15,5), color='k', marker='o', linestyle='none', title='{}-band'.format(df.columns[0].split('_')[0]))
         ax2.xaxis.set_major_formatter(dates.DateFormatter('%H:%m'))

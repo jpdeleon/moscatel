@@ -33,10 +33,18 @@ parser = argparse.ArgumentParser(description=
     usage='use "%(prog)s --help" for more information',
     formatter_class=argparse.RawTextHelpFormatter)
 
-parser.add_argument('--band_idx', help='0: g-band, 1: r-band, 2: z-band, (3: i-band)', type=int, choices=(0,1,2), required=True)
-parser.add_argument('--box_size', help='size of crop box (in pixels) centered on point source; default=80 pix', type=int, default=100)
-parser.add_argument('--r',help='size (in pixels) of aperture radius for photometry', type=int)
-parser.add_argument('--showfig', help='show raw lightcurve after aperture photometry?', type=bool, default=False)
+parser.add_argument('--band_idx',
+    help='0: g-band, 1: r-band, 2: z-band, (3: i-band)',
+    type=int, choices=(0,1,2), required=True)
+parser.add_argument('--box_size',
+    help='size of crop box (in pixels) centered on point source; default=80 pix',
+    type=int, default=100)
+parser.add_argument('--r',
+    help='size (in pixels) of aperture radius for photometry',
+    type=int)
+parser.add_argument('--showfig',
+    help='show raw lightcurve after aperture photometry?',
+    type=bool, default=False)
 args = parser.parse_args()
 
 band_idx = args.band_idx
@@ -89,8 +97,8 @@ if type(aperture_radius) is tuple:
         dfs, band_idx, band_names =  make_lightcurve(centroids, bands, band_idx,
                                         box_size, i)
         df = plot_lightcurve(dfs, band_idx, band_names, i)
-        #save as csv per loop
-        save_df(input_dir,df,band_names,band_idx, i)
+    #save as csv
+    save_df(input_dir,df,band_names,band_idx)
 
 #consider only one aperture
 else:
@@ -99,7 +107,7 @@ else:
     df = plot_lightcurve(dfs, band_idx, band_names, aperture_radius)
 
     #save as csv
-    save_df(input_dir,df,band_names,band_idx, aperture_radius)
+    save_df(input_dir,df,band_names,band_idx)
 
 '''
 See `analysis` for basic lightcurve analysis.
