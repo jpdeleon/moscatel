@@ -8,6 +8,8 @@ from tqdm import tqdm
 import pandas as pd
 import getpass
 import ast
+from astropy.visualization import ZScaleInterval
+
 try:
     from astropy.io import fits as pf
 except:
@@ -78,7 +80,7 @@ def init_moscatel(filedir, filters_in_config, output_dir, skip_every=None):
         #return empty dict
         bands={}
 
-    return filters_in_hdr_set
+    return filters_in_hdr_set, bands
 
 def create_config(config_dir):
     '''
@@ -233,6 +235,35 @@ def check_data(output_dir):
 
     return df_g, df_r, df_z
 
+def stack_raw_image(image_list, skip_every=1):
+    '''
+    stack image using median to be used for detecting
+    source locations (i.e. target and ref stars)
+    '''
+    image_array = []
+    for i in tqdm(image_list[::skip_every]):
+        img = pf.getdata(i)
+        image_array.append(img)
+    stacked_image = np.median(image_array, axis=0)
+
+    # stacked_image_g = stack_raw_image(bands['g'], skip_every=10)
+    # stacked_image_r = stack_raw_image(bands['r'], skip_every=10)
+    # stacked_image_z = stack_raw_image(bands['z_s'], skip_every=10)
+
+    return stacked_image
+
+def show_stacked_images(images):
+    '''
+
+    '''
+    fig, axes = plt.subplots(1,len(images),figsize=(15,5))
+    titles=list(images.keys())
+    for i,band in enumerate(images):
+        vmin,vmax= ZScaleInterval().get_limits(images[band])
+        axes[i].imshow(images[band],vmin=vmin,vmax=vmax)
+        axes[i].set_title(titles[i])
+    plt.show()
+    #return None
 
 def remove_outlier(df_g, df_r, df_z):
     print('\n-----------------------')
@@ -250,11 +281,6 @@ def remove_outlier(df_g, df_r, df_z):
     #check if grz
     #df_grz = df_grz[np.abs(df_grz-df_grz.mean())<=(clip_sigma*df_grz.std())]
     return df_g, df_r, df_z
-
-def get_star_centroids():
-    #stack a few images
-    #get sources
-    return
 
 def save_df(input_dir,df,band_names,band_idx):
     #save dataframe as csv

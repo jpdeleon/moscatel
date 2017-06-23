@@ -50,7 +50,7 @@ parser.add_argument('--binning',
     type=int, default=5)
 parser.add_argument('--r',
     help='aperture radius',
-    type=int, default=20)
+    type=int, default=15)
 
 args = parser.parse_args()
 
@@ -110,7 +110,7 @@ if band == 'g':
 elif band == 'r':
     res = df_phot(target, ref, df_r, band, r, bin=binning, normed=normed, showfig=True)
 elif band == 'z':
-    res = df_phot(target, ref, df_z, 'z_s', r, bin=binning, normed=normed, showfig=True)
+    res = df_phot(target, ref, df_z_s, band, r, bin=binning, normed=normed, showfig=True)
 elif band == 'i':
     res = df_phot(target, ref, df_i, band, r, bin=binning, normed=normed, showfig=True)
 
@@ -123,7 +123,7 @@ elif band== 'all':
         print('-----------------------')
         print('Plotting raw lightcurves of 3 bands')
         print('-----------------------\n')
-        res = plot_multicolor(df_g, df_r, df_z, star_idx=star)
+        res = plot_multicolor(df_grz, star_idx=star)
         #print(res)
 
     print('-----------------------')
