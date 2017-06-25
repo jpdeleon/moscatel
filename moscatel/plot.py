@@ -73,14 +73,20 @@ def plot_details(target, ref, df, normed=True):
     ax[3].set_ylabel('Airmass')
     plt.show()
 
-def plot_multicolor(df_g, df_r, df_z, r, star_idx, showfig=None):
+def plot_multicolor(df, star_idx, showfig=None):
     '''
     plotted when 'show_raw_lc == True' in moscatel-analysis
     '''
-    target_col='{0}_{1}_flux_r{2}'.format(band, target, r)
-    ref_col='{0}_{1}_flux_r{2}'.format(band, ref, r)
 
-    
+    if star_idx==0:
+        cols = 'g_a_flux g_b_flux g_c_flux'.split()
+
+    elif star_idx==1:
+        cols = 'r_a_flux r_b_flux r_c_flux'.split()
+
+    else:
+        cols = 'z_a_flux z_b_flux z_c_flux'.split()
+
     if showfig is not None and showfig == True:#showfig==None or showfig==True:
         #normalize
         df = df/df.median()
@@ -115,7 +121,7 @@ def df_phot(target, ref, df, band, r, bin, normed=True, showfig=None):
         ax2.plot(df.index, res, 'ko', linestyle='none', alpha=0.1)
         #plot binned data
         binned=res.resample(str(bin)+'T').mean().plot(ax=ax2, marker='o', linestyle='none')
-        ax2.set_title('target={1}, ref={2} ({0}-band)'.format(df.columns[0].split('_')[0],
+        ax2.set_title('target={1}, ref={2} ()'.format(df.columns[0].split('_')[0],
         target,ref))
         # ax2 = res.plot(figsize=(15,5), color='k', marker='o', linestyle='none', title='{}-band'.format(df.columns[0].split('_')[0]))
         ax2.xaxis.set_major_formatter(dates.DateFormatter('%H:%m'))

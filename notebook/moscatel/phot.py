@@ -24,10 +24,17 @@ def get_sources(img, num_stars=10, fwhm=8.0):
 
 def get_centroid(image, method='com'):
     '''
+<<<<<<< HEAD
     centroid_com(): Calculates the object center of mass from 2D image moments
     centroid_1dg(): Calculates the centroid by fitting 1D Gaussians to the marginal x and y distributions of the data
     centroid_2dg(): Calculates the centroid by fitting a 2D Gaussian to the 2D distribution of the data
     Default is centroid_2dg
+=======
+    centroid_com(): Calculates the object “center of mass” from 2D image moments.
+    centroid_1dg(): Calculates the centroid by fitting 1D Gaussians to the marginal x and y distributions of the data.
+    centroid_2dg(): Calculates the centroid by fitting a 2D Gaussian to the 2D distribution of the data.
+    Default is centroid_2dg.
+>>>>>>> 9135c664d4486dfdf5e12b8717f6ea2b27239bd4
     ''' 
     if method=='com':
         x, y = centroid_com(image)

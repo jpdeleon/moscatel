@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import pandas as pd
 from photutils import CircularAperture
 from astropy.visualization import ZScaleInterval
@@ -8,6 +9,12 @@ try:
 except:
     import pyfits as pf
 import matplotlib.pyplot as plt
+=======
+import matplotlib.pyplot as plt
+import pandas as pd
+from photutils import CircularAperture
+from astropy.visualization import ZScaleInterval
+>>>>>>> 9135c664d4486dfdf5e12b8717f6ea2b27239bd4
 import numpy as np
 
 def show_sources(image, sources, labels, method='sources', num_stars=10):
@@ -64,6 +71,7 @@ def plot_lightcurve(dfs, band_idx, showfig=None):
         df[cols].plot(subplots=True, figsize=(15,8),ax=ax)
         
     return df
+<<<<<<< HEAD
 
 def show_one_image_all_centroid(img, centroid, key, nstars=10, figsize=(10,5)):
     #create new figure every band
@@ -109,3 +117,5 @@ def show_one_centroid_all_image(band, centroid, skip_every, ncols=8, figsize=(10
     plt.axis('tight')
     plt.show()
     #return None 
+=======
+>>>>>>> 9135c664d4486dfdf5e12b8717f6ea2b27239bd4

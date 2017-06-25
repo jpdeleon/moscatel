@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from moscatel.utils import *
+from moscatel import utils
+from moscatel import phot
 import os
 import sys
 import getpass
@@ -14,9 +15,13 @@ parser = argparse.ArgumentParser(description="""
                 formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('--skip_every', help='skip every nth frame per band e.g. 5',
     type=int, default=None)
+parser.add_argument('--find_stars', help='determine the location of point \
+    sources from a stacked image',type=bool, default=False)
+
 args = parser.parse_args()
 
 skip_every = args.skip_every
+find_stars = args.find_stars
 
 config_dir = os.path.join('/home',username,'moscatel')
 config_file= os.path.join(config_dir,'config.txt')
@@ -24,27 +29,47 @@ config_file= os.path.join(config_dir,'config.txt')
 if not os.path.exists(config_dir):
     os.makedirs(config_dir)
 if not os.path.isfile(config_file):
-    create_config(config_dir)
+    utils.create_config(config_dir)
+    print('Run `moscatel-init again after checking settings in config.txt`')
+    sys.exit()
 
 #initialize
 print('-----------------------')
 print('Checking raw data frames')
 print('-----------------------\n')
-config=check_config()
+config = utils.check_config()
 data_dir = config[0]
 output_dir = config[1]
 filters_in_config = config[2].split(',')
 
 try:
-    filters_in_hdr = init_moscatel(data_dir, filters_in_config, output_dir, skip_every)
+    filters_in_hdr, bands = utils.init_moscatel(data_dir, filters_in_config, \
+                            output_dir, skip_every)
 except:
-    print("Is raw data in 'data/'?\n Consider editing the config.txt in ~/moscatel/")
+    print("Is raw data in 'data/'?\n \
+        Consider editing the config.txt in ~/moscatel/")
+
 
 if filters_in_config.sort() != filters_in_hdr:
     print('The filters specified in config file:\n{0}\n \
             does not match the filters in header of the raw data: \
             \n{1}'.format(filters_in_config, filters_in_hdr))
     sys.exit()
+
+stacked_image = {}
+
+if find_stars == True:
+    for band in bands.keys():
+        print('stacking raw {}-band images'.format(band))
+        stacked_image[band] = utils.stack_raw_image(bands[band], \
+                                        skip_every=skip_every)
+    #utils.show_stacked_images(stacked_image)
+
+    for key in stacked_image.keys():
+        img = stacked_image[key]
+        #show_stacked_images(stacked_image)
+        sources = phot.get_sources(img, num_stars=10)
+        phot.show_sources(img, sources, num_stars=10)
 
 print('-----------------------')
 print('          DONE')
