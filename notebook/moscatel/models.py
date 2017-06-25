@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 from astropy.modeling import models, fitting
 from scipy.optimize import curve_fit
 from scipy.ndimage.filters import gaussian_filter
+<<<<<<< HEAD
+=======
+from moscatel import utils
+>>>>>>> d1e37f14af9fbee428799658187fe419867b8809
 
 def gauss1D(x, *params):
     A, mu, sigma, eps= params
@@ -41,7 +45,11 @@ def model_gaussian(image_crop,convolve=False,verbose=False, show_fit=False):
     return popt
 
 
+<<<<<<< HEAD
 def model_gaussian2D(img_crop, verbose=False):
+=======
+def model_gaussian2D(img_crop, verbose=False, fwhm=8.):
+>>>>>>> d1e37f14af9fbee428799658187fe419867b8809
     try:
         #get 1D fit results
         result_1Dfit = model_gaussian(img_crop)
@@ -50,10 +58,18 @@ def model_gaussian2D(img_crop, verbose=False):
         #initialize model
         g_init = models.Gaussian2D(amplitude=amp,x_mean=mu, y_mean=mu, x_stddev=sigma, y_stddev=sigma)
     except:
+<<<<<<< HEAD
         #if 1D fitting fails due to wrong initial centroiding
         x_mean, y_mean = img_crop.shape[0]/2, img_crop.shape[1]/2 
         #initialize model using default values
         g_init = models.Gaussian2D(amplitude=1,x_mean=x_mean, y_mean=y_mean, x_stddev=3.55, y_stddev=3.55)
+=======
+	sigma= utils.fwhm_to_sigma(fwhm)
+        #if 1D fitting fails due to wrong initial centroiding
+        x_mean, y_mean = img_crop.shape[0]/2, img_crop.shape[1]/2 
+        #initialize model using default values
+        g_init = models.Gaussian2D(amplitude=1,x_mean=x_mean, y_mean=y_mean, x_stddev=sigma, y_stddev=sigma)
+>>>>>>> d1e37f14af9fbee428799658187fe419867b8809
 
     #fit model
     fit_g = fitting.LevMarLSQFitter()

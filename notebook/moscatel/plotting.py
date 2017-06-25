@@ -1,7 +1,20 @@
+<<<<<<< HEAD
 import matplotlib.pyplot as plt
 import pandas as pd
 from photutils import CircularAperture
 from astropy.visualization import ZScaleInterval
+=======
+import pandas as pd
+from photutils import CircularAperture
+from astropy.visualization import ZScaleInterval
+import warnings
+from moscatel import utils
+try:
+    from astropy.io import fits as pf
+except:
+    import pyfits as pf
+import matplotlib.pyplot as plt
+>>>>>>> d1e37f14af9fbee428799658187fe419867b8809
 import numpy as np
 
 def show_sources(image, sources, labels, method='sources', num_stars=10):
@@ -58,3 +71,51 @@ def plot_lightcurve(dfs, band_idx, showfig=None):
         df[cols].plot(subplots=True, figsize=(15,8),ax=ax)
         
     return df
+<<<<<<< HEAD
+=======
+
+def show_one_image_all_centroid(img, centroid, key, nstars=10, figsize=(10,5)):
+    #create new figure every band
+    fig = plt.figure(figsize=figsize)
+    #centroid = list(zip(sources[band_id]['xcentroid'],sources[band_id]['ycentroid']))
+    for i,xy in enumerate(centroid[:nstars]):
+        #bkg subtraction?
+                
+        try:
+            img_crop = utils.get_crop(img, xy, box_size=40)
+            ncols=nstars/2
+            nrows=int(nstars/ncols+1)
+            ax = plt.subplot(nrows,ncols,i+1)
+        except:
+            warnings.warn('star not cropped')
+        ax.set_title('star idx={}'.format(i))
+        ax.imshow(img_crop)
+        ax.plot(img_crop.shape[0]/2,img_crop.shape[1]/2, 'r+', markersize=10)
+        ax.set_xlabel('{0:.1f},  {1:.1f}'.format(xy[0],xy[1]))
+        ax.set_xticks([])
+        ax.set_yticks([])
+    plt.suptitle('{}-band'.format(key))
+    #return None
+
+def show_one_centroid_all_image(band, centroid, skip_every, ncols=8, figsize=(10,8)):
+    
+    nrows=round(len(band[::skip_every])/ncols)
+    fig = plt.figure(figsize=figsize)
+    for idx,i in enumerate(band[::skip_every]):
+        img=pf.open(i)[0].data
+        hdr=pf.open(i)[0].header
+        try:
+            img_crop = utils.get_crop(img, centroid, box_size=60)
+            ax = plt.subplot(nrows,ncols,idx+1)
+        except:
+            warnings.warn('star not cropped')
+        ax.set_title('img={}'.format(idx))
+        ax.imshow(img_crop)
+        ax.plot(img_crop.shape[0]/2,img_crop.shape[1]/2, 'w+', markersize=10)
+        ax.set_xticks([])
+        ax.set_yticks([])
+    plt.suptitle('{}-band'.format(hdr['FILTER']))
+    plt.axis('tight')
+    plt.show()
+    #return None 
+>>>>>>> d1e37f14af9fbee428799658187fe419867b8809

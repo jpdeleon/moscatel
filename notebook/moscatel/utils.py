@@ -25,7 +25,11 @@ def get_band_list(file_list):
                 j=j.strip(' ')
                 bands[j].append(i)
 
+<<<<<<< HEAD
     for key in bands.keys():
+=======
+    for key in sorted(bands.keys()):
+>>>>>>> d1e37f14af9fbee428799658187fe419867b8809
         print('{0}-band: {1} frames'.format(key, len(bands[key])))
     return bands
 
@@ -61,5 +65,15 @@ def get_crop(image, centroid, box_size):
 
     return image_crop
 
+<<<<<<< HEAD
+=======
+
+def fwhm_to_sigma(fwhm):
+    return fwhm/ (2*np.sqrt(2*np.log(2)))
+
+def sigma_to_fwhm(sigma):
+    return sigma * (2*np.sqrt(2*np.log(2)))
+
+>>>>>>> d1e37f14af9fbee428799658187fe419867b8809
 if __name__ == "__main__":
     main()
