@@ -151,7 +151,7 @@ def make_lightcurve(band_list, star_positions, aperture_radii, skip_every=1, box
             #compute new centroid
             new_centroid = get_centroid(img_crop, method='2D_gaussian')
             #perform photometry
-            phot_table = get_phot_table(img_crop, new_centroid, aperture_radii=aperture_radii)
+            phot_table = get_phot_table(img_crop, new_centroid, aperture_radii)
             #estimate background within annulus
             bkg= get_bkg(img_crop, new_centroid, r_in, r_out)
             phot_table['bkg'] = bkg
@@ -173,11 +173,11 @@ def make_lightcurve(band_list, star_positions, aperture_radii, skip_every=1, box
             #correct actual centroid (not cropped image)
             phot_table['xcenter'] = xshift+position[0]
             phot_table['ycenter'] = yshift+position[1]
-            
             xcenters.append(phot_table['xcenter'])
             ycenters.append(phot_table['ycenter'])
             #add time (as index)
             phot_table['mjd'] = hdr['MJD-STRT']
+            #append table
             tables[star_idx].append(phot_table)
             #import pdb; pdb.set_trace()
 
